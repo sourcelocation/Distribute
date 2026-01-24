@@ -1,0 +1,26 @@
+Windows Registry Editor Version 5.00
+
+; Registry configuration for Distribute App deep links
+; This file registers the 'distribute://' URL scheme to open with DistributeApp
+;
+; IMPORTANT: Before importing this file, you need to update the paths below
+; to point to your actual DistributeApp.exe location.
+;
+; To install:
+; 1. Update the path to DistributeApp.exe in this file
+; 2. Double-click this file to add the entries to the Windows Registry
+; 3. Alternatively, run: reg import distribute_url_scheme.reg
+
+[HKEY_CURRENT_USER\SOFTWARE\Classes\distribute]
+@="URL:Distribute Protocol"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\SOFTWARE\Classes\distribute\DefaultIcon]
+@="\"C:\\Program Files\\DistributeApp\\DistributeApp.exe\",0"
+
+[HKEY_CURRENT_USER\SOFTWARE\Classes\distribute\shell]
+
+[HKEY_CURRENT_USER\SOFTWARE\Classes\distribute\shell\open]
+
+[HKEY_CURRENT_USER\SOFTWARE\Classes\distribute\shell\open\command]
+@="\"C:\\Program Files\\DistributeApp\\DistributeApp.exe\" \"%1\""

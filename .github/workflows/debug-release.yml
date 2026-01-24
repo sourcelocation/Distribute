@@ -1,0 +1,71 @@
+name: Debug Release Logic
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'The Run ID of the successful build'
+        required: true
+      version:
+        description: 'Version tag to simulate'
+        required: true
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  debug-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts from specific run
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          run_id: ${{ inputs.run_id }}
+          path: artifacts
+
+      - name: Rename and Prepare Assets
+        run: |
+          mkdir release_assets
+          VERSION="${{ inputs.version }}"
+          
+          # Android: Rename individual APKs
+          if [ -d "artifacts/android-apks" ]; then
+            cd artifacts/android-apks
+            for apk in *.apk; do
+              suffix="${apk#app-}"
+              abi="${suffix%-release.apk}"
+              cp "$apk" "../../release_assets/android-${abi}-${VERSION}.apk"
+            done
+            cd ../..
+          fi
+
+          # Windows: Zip
+          if [ -d "artifacts/windows-exe" ]; then
+            cd artifacts/windows-exe
+            zip -r "../../release_assets/windows-${VERSION}.zip" .
+            cd ../..
+          fi
+
+          # iOS: Rename
+          if [ -d "artifacts/ios-ipa" ]; then
+            find artifacts/ios-ipa -name "*.ipa" -exec cp {} "release_assets/ios-${VERSION}.ipa" \;
+          fi
+
+          # macOS: Rename
+          if [ -d "artifacts/macos-dmg" ]; then
+            find artifacts/macos-dmg -name "*.dmg" -exec cp {} "release_assets/macos-${VERSION}.dmg" \;
+          fi
+          
+          echo "Files prepared:"
+          ls -l release_assets/
+
+      - name: Create Test Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: release_assets/*
+          draft: true
+          prerelease: true
+          name: "Test Release ${{ inputs.version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

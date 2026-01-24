@@ -1,0 +1,237 @@
+name: Flutter CI/CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+permissions:
+  actions: read
+  contents: write
+  
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v4
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.40.0-0.2.pre'
+        channel: 'beta'
+
+    - name: Get Flutter dependencies
+      run: flutter pub get
+
+    - name: Auto-generated files setup
+      run: flutter pub run build_runner build --delete-conflicting-outputs
+
+    - name: Build APK
+      run: flutter build apk --release --split-per-abi --target-platform android-arm64
+
+    - name: Upload APK artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apks
+        path: |
+          build/app/outputs/flutter-apk/*.apk
+        retention-days: 30
+
+  windows:
+    runs-on: windows-latest
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v4
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.40.0-0.2.pre'
+        channel: 'beta'
+
+    - name: Get Flutter dependencies
+      run: flutter pub get
+
+    - name: Auto-generated files setup
+      run: flutter pub run build_runner build --delete-conflicting-outputs
+
+    - name: Build Windows EXE
+      run: flutter build windows --release
+
+    - name: Upload Windows artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-exe
+        path: |
+          build/windows/x64/runner/Release/*
+        retention-days: 30
+
+  ios:
+    runs-on: macos-latest
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.40.0-0.2.pre'
+        channel: 'beta'
+
+    - name: Get Flutter dependencies
+      run: flutter pub get
+
+    - name: Auto-generated files setup
+      run: flutter pub run build_runner build --delete-conflicting-outputs
+
+    - name: Build iOS app bundle
+      run: flutter build ios --release --no-codesign
+
+    - name: Create unsigned IPA
+      run: |
+        APP_BUNDLE="build/ios/iphoneos/Runner.app"
+        IPA_PATH="build/ios/iphoneos/DistributeApp.ipa"
+        mkdir -p Payload
+        cp -R "$APP_BUNDLE" Payload/
+        zip -r "$IPA_PATH" Payload
+        rm -rf Payload
+        
+        echo "Created unsigned IPA at $IPA_PATH"
+
+    - name: Upload iOS IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-ipa
+        path: build/ios/iphoneos/*.ipa
+        retention-days: 30
+
+  macos:
+    runs-on: macos-latest
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v4
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.40.0-0.2.pre'
+        channel: 'beta'
+
+    - name: Get Flutter dependencies
+      run: flutter pub get
+
+    - name: Auto-generated files setup
+      run: flutter pub run build_runner build --delete-conflicting-outputs
+
+    - name: Build macOS app
+      run: flutter build macos --release
+
+    - name: Create DMG
+      run: |
+        # Install create-dmg if not present
+        brew install create-dmg || true
+        
+        # Prepare paths
+        mkdir -p dist
+        APP_PATH="build/macos/Build/Products/Release/DistributeApp.app"
+        APP_NAME="DistributeApp"
+        TEMP_DIR="temp_dmg_source"
+        DMG_NAME="dist/${APP_NAME}-${{ github.sha }}.dmg"
+        
+        # Create temporary source folder and copy app bundle into it
+        mkdir -p "$TEMP_DIR"
+        cp -R "$APP_PATH" "$TEMP_DIR/"
+        
+        # Create DMG
+        create-dmg \
+          --volname "${APP_NAME}-${{ github.sha }}" \
+          --volicon "$APP_PATH/Contents/Resources/AppIcon.icns" \
+          --window-pos 200 120 \
+          --window-size 800 400 \
+          --icon-size 100 \
+          --icon "$APP_NAME.app" 200 190 \
+          --hide-extension "$APP_NAME.app" \
+          --app-drop-link 600 185 \
+          "$DMG_NAME" \
+          "$TEMP_DIR"
+        
+        # Cleanup
+        rm -rf "$TEMP_DIR"
+
+    - name: Upload macOS DMG artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-dmg
+        path: dist/*.dmg
+        retention-days: 30
+
+  release:
+    needs: [android, windows, ios, macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Rename and Prepare Assets
+      run: |
+        mkdir release_assets
+        VERSION="${{ github.ref_name }}"
+        
+        # 1. Android (Separate APKs per architecture)
+        # Input: app-arm64-v8a-release.apk -> Output: android-arm64-v8a-v0.0.5.apk
+        if [ -d "artifacts/android-apks" ]; then
+          cd artifacts/android-apks
+          for apk in *.apk; do
+            # Extract the ABI (e.g. arm64-v8a) by stripping 'app-' and '-release.apk'
+            suffix="${apk#app-}"
+            abi="${suffix%-release.apk}"
+            
+            cp "$apk" "../../release_assets/android-${abi}-${VERSION}.apk"
+          done
+          cd ../..
+        fi
+
+        # 2. Windows (Zip EXE + DLLs)
+        # Windows builds must stay together in a folder, so we zip them.
+        if [ -d "artifacts/windows-exe" ]; then
+          cd artifacts/windows-exe
+          zip -r "../../release_assets/windows-${VERSION}.zip" .
+          cd ../..
+        fi
+
+        # 3. iOS (Rename single IPA)
+        if [ -d "artifacts/ios-ipa" ]; then
+          find artifacts/ios-ipa -name "*.ipa" -exec cp {} "release_assets/ios-${VERSION}.ipa" \;
+        fi
+
+        # 4. macOS (Rename single DMG)
+        if [ -d "artifacts/macos-dmg" ]; then
+          find artifacts/macos-dmg -name "*.dmg" -exec cp {} "release_assets/macos-${VERSION}.dmg" \;
+        fi
+
+        # List files to verify
+        ls -l release_assets/
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release_assets/*
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
