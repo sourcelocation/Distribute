@@ -388,16 +388,16 @@ class _AboutSection extends StatelessWidget {
           onTap: () {
             showAboutDialog(
               context: context,
-              applicationName: 'DistributeApp',
+              applicationName: 'Distribute',
               applicationVersion: "v$version",
               applicationLegalese:
-                  '© 2025 sourcelocation. All rights reserved.',
+                  '© 2026 sourcelocation. All rights reserved.',
             );
           },
         ),
         ListTile(
           title: Text(
-            "Distribute everything... except for this beta\nv$version",
+            "Distribute (App)\nv$version",
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
