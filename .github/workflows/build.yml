@@ -24,70 +24,78 @@ jobs:
   codegen:
     runs-on: ubuntu-latest
     steps:
-    - name: Clone repository
-      uses: actions/checkout@v4
+      - name: Clone repository
+        uses: actions/checkout@v4
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: ${{ env.FLUTTER_CHANNEL }}
-        cache: true
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-    - name: Get Flutter dependencies
-      run: flutter pub get
+      - name: Get Flutter dependencies
+        run: flutter pub get
 
-    - name: Run Build Runner
-      run: dart run build_runner build --delete-conflicting-outputs
+      - name: Run Build Runner
+        run: dart run build_runner build --delete-conflicting-outputs
 
-    - name: Upload Clean Source
-      uses: actions/upload-artifact@v4
-      with:
-        name: clean-source
-        path: .
-        retention-days: 1
-        exclude: |
-          .git/
-          .dart_tool/
-          build/
-          .github/
-          .idea/
+      - name: Clean Environment
+        run: rm -rf .dart_tool .git build android/.gradle
+
+      - name: Upload Clean Source
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-source
+          path: .
+          retention-days: 1
 
   android:
     needs: codegen
     runs-on: ubuntu-latest
     steps:
-    - name: Download Source
-      uses: actions/download-artifact@v4
-      with:
-        name: clean-source
+      - name: Download Source
+        uses: actions/download-artifact@v4
+        with:
+          name: clean-source
 
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: ${{ env.JAVA_VERSION }}
-        cache: 'gradle'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'gradle'
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
-        channel: ${{ env.FLUTTER_CHANNEL }}
-        cache: true
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-    - name: Get dependencies
-      run: flutter pub get
+      - name: Cache Cargo Registry & Target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target 
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
-    - name: Build APK
-      run: flutter build apk --release --split-per-abi --target-platform android-arm64
+      - name: Get dependencies
+        run: flutter pub get
 
-    - name: Upload APK artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-apks
-        path: build/app/outputs/flutter-apk/*.apk
-        retention-days: 1
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 1
 
   windows:
     needs: codegen
