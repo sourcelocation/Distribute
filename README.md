@@ -27,7 +27,6 @@ An offline-first streaming music app that connects to your home server.
 
 </div>
 
----
 
 ## Overview
 
@@ -42,31 +41,31 @@ An offline-first streaming music app that connects to your home server.
 | **Lossless Audio** | The clearest sound with no compromises, powered by a high-performance audio engine. |
 | **Privacy Focused** | We don't store, control, or own your data. You host your hub. |
 
+
+## Screenshots
+
+<img src="github-assets/screenshot1.jpg" alt="Distribute Screenshot" max-width="600px" />
+
+<img src="github-assets/screenshot2.png" alt="Distribute Screenshot" max-width="600px" />
+
+<img src="github-assets/screenshot3.png" alt="Distribute Screenshot" max-width="600px" />
+
+
 ---
 
 ## ⬇️ Download and install
 
 ### Android
-Download the latest release from the [releases](https://github.com/ProjectDistribute/app/releases) page.
+Download the latest release from the [releases](https://github.com/ProjectDistribute/Distribute/releases) page.
 
 ### Windows
-Download the latest release from the [releases](https://github.com/ProjectDistribute/app/releases) page.
+Download the latest release from the [releases](https://github.com/ProjectDistribute/Distribute/releases) page.
 
 ### iOS
 Download from the [App Store](https://apps.apple.com/app/)
 
 ### macOS
-Download from the [App Store](https://apps.apple.com/app/) or the [releases](https://github.com/ProjectDistribute/app/releases) page.
-
----
-
-## Screenshots
-
-<img src="github-assets/screenshot.png" alt="Distribute Screenshot" width="100%" />
-
-<img src="github-assets/screenshot2.png" alt="Distribute Screenshot" width="100%" />
-
-<img src="github-assets/screenshot3.png" alt="Distribute Screenshot" width="100%" />
+Download from the [App Store](https://apps.apple.com/app/) or the [releases](https://github.com/ProjectDistribute/Distribute/releases) page.
 
 ---
 
@@ -123,7 +122,7 @@ Distribute is built with a focus on **performance**, **beauty**, and **utility**
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/ProjectDistribute/app.git
+    git clone https://github.com/ProjectDistribute/Distribute.git
     cd app
     ```
 
