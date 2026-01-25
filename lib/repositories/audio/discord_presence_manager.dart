@@ -6,12 +6,10 @@ import 'package:flutter_discord_rpc/flutter_discord_rpc.dart';
 class DiscordPresenceManager {
   final ArtworkRepository artworkRepository;
   final SettingsRepository settingsRepository;
-  final String appDataPath;
 
   DiscordPresenceManager({
     required this.artworkRepository,
     required this.settingsRepository,
-    required this.appDataPath,
   });
 
   void listenTo(Stream<ControllerState> stream) {
@@ -30,7 +28,7 @@ class DiscordPresenceManager {
 
     if (state.isPlaying && state.currentSong != null) {
       final song = state.currentSong!;
-      final duration = await song.getDuration(appDataPath);
+      final duration = await song.getDuration(settingsRepository.rootPath);
 
       FlutterDiscordRPC.instance.setActivity(
         activity: RPCActivity(

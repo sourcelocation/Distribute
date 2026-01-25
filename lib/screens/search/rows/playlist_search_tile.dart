@@ -26,6 +26,7 @@ class PlaylistSearchTile extends StatelessWidget {
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      dense: true,
     );
   }
 }

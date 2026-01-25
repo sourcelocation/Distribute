@@ -16,34 +16,81 @@ ColorScheme createColorScheme(Brightness brightness) {
     onErrorContainer: Colors.red,
     error: Colors.red,
     onError: Colors.white,
+    outline: Color.fromARGB(255, 50, 50, 50),
+    outlineVariant: Color.fromARGB(255, 50, 50, 50),
   );
 }
 
 TextTheme createTextTheme() {
   return TextTheme(
-    bodyMedium: TextStyle(fontSize: 16, color: Colors.grey[300]),
-    bodySmall: TextStyle(fontSize: 14, color: Colors.grey[500]),
+    bodyMedium: TextStyle(
+      fontSize: 16,
+      color: Colors.grey[300],
+      letterSpacing: -0.2,
+    ),
+    bodySmall: TextStyle(
+      fontSize: 14,
+      color: Colors.grey[500],
+      letterSpacing: -0.1,
+    ),
+    titleMedium: const TextStyle(
+      fontWeight: FontWeight.bold,
+      letterSpacing: -0.5,
+    ),
+    headlineSmall: const TextStyle(
+      fontWeight: FontWeight.bold,
+      letterSpacing: -0.8,
+    ),
   );
 }
 
-InputDecorationTheme createInputDecorationTheme() {
+InputDecorationTheme createInputDecorationTheme(ColorScheme colorScheme) {
   return InputDecorationTheme(
     filled: true,
-    fillColor: Colors.grey[900]?.withAlpha(100),
+    fillColor: colorScheme.surfaceContainer.withAlpha(150),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12.0),
-      borderSide: BorderSide.none,
+      borderSide: BorderSide(color: colorScheme.outline, width: 1),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12.0),
-      borderSide: BorderSide.none,
+      borderSide: BorderSide(color: colorScheme.outline, width: 1),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12.0),
-      borderSide: BorderSide.none,
+      borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
     ),
-    hintStyle: TextStyle(color: Colors.grey[500]),
-    labelStyle: TextStyle(color: Colors.grey[500]),
+    hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+    labelStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+  );
+}
+
+CardThemeData createCardTheme(ColorScheme colorScheme) {
+  return CardThemeData(
+    elevation: 0,
+    color: colorScheme.surfaceContainer,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: colorScheme.outline, width: 1),
+    ),
+    margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+  );
+}
+
+DialogThemeData createDialogTheme(ColorScheme colorScheme) {
+  return DialogThemeData(
+    backgroundColor: colorScheme.surface,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: BorderSide(color: colorScheme.outline, width: 1),
+    ),
+    titleTextStyle: const TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+      color: Colors.white,
+    ),
   );
 }
 
@@ -53,7 +100,7 @@ DividerThemeData createDividerTheme() {
     endIndent: 16.0,
     color: const Color.fromARGB(255, 50, 50, 50),
     thickness: 1.0,
-    space: 32.0,
+    space: 16.0,
   );
 }
 
@@ -66,10 +113,52 @@ AppBarTheme createAppBarTheme(ColorScheme colorScheme) {
   );
 }
 
-ListTileThemeData createListTileTheme() {
+ListTileThemeData createListTileTheme(ColorScheme colorScheme) {
   return ListTileThemeData(
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-    visualDensity: VisualDensity.compact,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+    visualDensity: VisualDensity.standard,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+    horizontalTitleGap: 12,
+    iconColor: colorScheme.secondary,
+    titleTextStyle: const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.2,
+    ),
+  );
+}
+
+SnackBarThemeData createSnackBarTheme() {
+  return SnackBarThemeData(
+    backgroundColor: const Color.fromARGB(255, 25, 25, 25),
+    contentTextStyle: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w500,
+      fontSize: 14,
+      letterSpacing: -0.1,
+    ),
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: const BorderSide(color: Color.fromARGB(255, 50, 50, 50)),
+    ),
+    elevation: 4,
+  );
+}
+
+IconThemeData createIconTheme(ColorScheme colorScheme) {
+  return IconThemeData(color: colorScheme.onSurface, size: 24);
+}
+
+FloatingActionButtonThemeData createFabTheme(ColorScheme colorScheme) {
+  return FloatingActionButtonThemeData(
+    backgroundColor: colorScheme.primary,
+    foregroundColor: colorScheme.onPrimary,
+    elevation: 0,
+    focusElevation: 0,
+    hoverElevation: 0,
+    highlightElevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   );
 }
 
@@ -82,9 +171,14 @@ ThemeData createDarkTheme() {
     colorScheme: colorScheme,
     textTheme: createTextTheme(),
     dividerTheme: createDividerTheme(),
-    inputDecorationTheme: createInputDecorationTheme(),
+    inputDecorationTheme: createInputDecorationTheme(colorScheme),
     appBarTheme: createAppBarTheme(colorScheme),
-    listTileTheme: createListTileTheme(),
+    listTileTheme: createListTileTheme(colorScheme),
+    cardTheme: createCardTheme(colorScheme),
+    dialogTheme: createDialogTheme(colorScheme),
+    iconTheme: createIconTheme(colorScheme),
+    floatingActionButtonTheme: createFabTheme(colorScheme),
+    snackBarTheme: createSnackBarTheme(),
     dividerColor: const Color.fromARGB(255, 50, 50, 50),
   );
 }
@@ -98,9 +192,14 @@ ThemeData createLightTheme() {
     colorScheme: colorScheme,
     textTheme: createTextTheme(),
     dividerTheme: createDividerTheme(),
-    inputDecorationTheme: createInputDecorationTheme(),
+    inputDecorationTheme: createInputDecorationTheme(colorScheme),
     appBarTheme: createAppBarTheme(colorScheme),
-    listTileTheme: createListTileTheme(),
+    listTileTheme: createListTileTheme(colorScheme),
+    cardTheme: createCardTheme(colorScheme),
+    dialogTheme: createDialogTheme(colorScheme),
+    iconTheme: createIconTheme(colorScheme),
+    floatingActionButtonTheme: createFabTheme(colorScheme),
+    snackBarTheme: createSnackBarTheme(),
     dividerColor: const Color.fromARGB(255, 50, 50, 50),
   );
 }

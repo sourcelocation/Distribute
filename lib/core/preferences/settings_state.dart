@@ -4,6 +4,7 @@ part 'settings_state.freezed.dart';
 
 @freezed
 sealed class SettingsState with _$SettingsState {
+  const SettingsState._();
   const factory SettingsState({
     required String serverURL,
     required bool hasAcceptedEula,
@@ -11,5 +12,9 @@ sealed class SettingsState with _$SettingsState {
     required bool discordRPCEnabled,
     required bool dummySoundEnabled,
     required bool debugMode,
+    required String? customDownloadPath,
+    required String defaultDataPath,
   }) = _SettingsState;
+
+  String get rootPath => customDownloadPath ?? defaultDataPath;
 }

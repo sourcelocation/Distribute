@@ -40,19 +40,87 @@ class _ServerUrlPageState extends State<ServerUrlPage> {
       _isValidating = true;
     });
 
-    final normalized = _normalizeUrl(rawUrl);
+    // Determine the first URL to try.
+    final firstUrl = _normalizeUrl(rawUrl);
 
-    context.read<SettingsCubit>().setServerURL(normalized);
+    // Save and try first URL
+    await context.read<SettingsCubit>().setServerURL(firstUrl);
+    if (!mounted) return;
+    await context.read<ServerStatusCubit>().loadStatus();
 
+    // Check if successful
+    if (!mounted) return;
+    final firstState = context.read<ServerStatusCubit>().state;
+    final firstSuccess = firstState.maybeWhen(
+      loaded: (_) => true,
+      orElse: () => false,
+    );
+
+    if (firstSuccess) {
+      if (!mounted) return;
+      setState(() => _isValidating = false);
+      widget.onNext();
+      return;
+    }
+
+    // If failed and we tried HTTPS, try HTTP fallback
+    if (firstUrl.startsWith('https://')) {
+      final httpUrl = firstUrl.replaceFirst('https://', 'http://');
+
+      // Save and try HTTP URL
+      await context.read<SettingsCubit>().setServerURL(httpUrl);
+      if (!mounted) return;
+      await context.read<ServerStatusCubit>().loadStatus();
+
+      if (!mounted) return;
+      final secondState = context.read<ServerStatusCubit>().state;
+      final secondSuccess = secondState.maybeWhen(
+        loaded: (_) => true,
+        orElse: () => false,
+      );
+
+      if (secondSuccess) {
+        final useHttp =
+            await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text("Insecure Connection"),
+                content: const Text(
+                  "Secure connection (HTTPS) failed. connecting via HTTP worked, but it is not secure. Do you want to proceed?",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("No"),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Yes"),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+
+        if (useHttp) {
+          if (!mounted) return;
+          setState(() => _isValidating = false);
+          widget.onNext();
+          return;
+        }
+      }
+    }
+
+    // Revert to original URL if we are here (either HTTP failed, or user refused HTTP)
+    if (!mounted) return;
+    await context.read<SettingsCubit>().setServerURL(firstUrl);
+    if (!mounted) return;
     await context.read<ServerStatusCubit>().loadStatus();
 
     if (!mounted) return;
-
     setState(() {
       _isValidating = false;
     });
-
-    widget.onNext();
   }
 
   String _normalizeUrl(String input) {

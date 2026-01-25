@@ -10,6 +10,7 @@ abstract class LoggedInUser with _$LoggedInUser {
     @Default('') String username,
     @Default('') String token,
     String? rootFolderId,
+    @Default(false) bool isAdmin,
   }) = _LoggedInUser;
 
   factory LoggedInUser.fromJson(Map<String, dynamic> json) =>

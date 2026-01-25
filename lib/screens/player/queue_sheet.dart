@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:distributeapp/repositories/audio/music_player_controller.dart';
 import 'package:flutter/material.dart';
@@ -14,70 +15,104 @@ class QueueSheet extends StatelessWidget {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Queue',
-                style: Theme.of(context).textTheme.headlineSmall,
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withAlpha(170),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withAlpha(30),
+                    width: 0.5,
+                  ),
+                ),
               ),
-            ),
-            Expanded(
-              child: BlocBuilder<MusicPlayerBloc, ControllerState>(
-                builder: (context, state) {
-                  final queue = state.queue;
-                  if (queue.isEmpty) {
-                    return const Center(child: Text("Queue is empty"));
-                  }
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(50),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Queue',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Expanded(
+                    child: BlocBuilder<MusicPlayerBloc, ControllerState>(
+                      builder: (context, state) {
+                        final queue = state.queue;
+                        if (queue.isEmpty) {
+                          return const Center(child: Text("Queue is empty"));
+                        }
 
-                  return ListView.builder(
-                    controller: scrollController,
-                    itemCount: queue.length,
-                    itemBuilder: (context, index) {
-                      final item = queue[index];
-                      final isCurrent = index == state.queueIndex;
+                        return ListView.builder(
+                          controller: scrollController,
+                          itemCount: queue.length,
+                          itemBuilder: (context, index) {
+                            final item = queue[index];
+                            final isCurrent = index == state.queueIndex;
 
-                      return ListTile(
-                        leading: isCurrent
-                            ? Icon(
-                                Icons.equalizer,
-                                color: Theme.of(context).colorScheme.primary,
-                              )
-                            : Text(
-                                '${index + 1}',
-                                style: const TextStyle(color: Colors.grey),
+                            return ListTile(
+                              leading: isCurrent
+                                  ? Icon(
+                                      Icons.equalizer,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    )
+                                  : Text(
+                                      '${index + 1}',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                              title: Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: isCurrent
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isCurrent
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                ),
                               ),
-                        title: Text(
-                          item.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontWeight: isCurrent
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isCurrent
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
-                        ),
-                        subtitle: Text(
-                          item.artist ?? 'Unknown Artist',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onTap: () {
-                          context.read<MusicPlayerBloc>().add(
-                            MusicPlayerEvent.skipToQueueItem(index),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
+                              subtitle: Text(
+                                item.artist ?? 'Unknown Artist',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () {
+                                context.read<MusicPlayerBloc>().add(
+                                  MusicPlayerEvent.skipToQueueItem(index),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         );
       },
     );

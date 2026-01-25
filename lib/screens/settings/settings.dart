@@ -28,17 +28,18 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
-          6,
-          kToolbarHeight + MediaQuery.of(context).padding.top + 6,
-          6,
-          6,
+          16,
+          kToolbarHeight + MediaQuery.of(context).padding.top + 12,
+          16,
+          12 + MediaQuery.of(context).padding.bottom,
         ),
         children: const [
           SettingsProfileHeader(),
-          _UserSection(),
-          _ServerSection(),
-          _DebugSection(),
-          _AboutSection(),
+          Card(child: _UserSection()),
+          Card(child: _DataSection()),
+          Card(child: _ServerSection()),
+          Card(child: _DebugSection()),
+          Card(child: _AboutSection()),
         ],
       ),
     );
@@ -67,6 +68,7 @@ class _UserSection extends StatelessWidget {
 
             if (loggedInUser != null) {
               return ListTile(
+                leading: const Icon(Icons.logout),
                 title: const Text(
                   "Log out",
                   style: TextStyle(fontWeight: FontWeight.w600),
@@ -81,6 +83,7 @@ class _UserSection extends StatelessWidget {
             return Column(
               children: [
                 ListTile(
+                  leading: const Icon(Icons.login),
                   title: Row(
                     children: [
                       const Text(
@@ -99,6 +102,7 @@ class _UserSection extends StatelessWidget {
                   onTap: () => context.push('/settings/login'),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.person_add_outlined),
                   title: const Text(
                     "Sign up",
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -116,6 +120,36 @@ class _UserSection extends StatelessWidget {
   }
 }
 
+class _DataSection extends StatelessWidget {
+  const _DataSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(
+          title: const Text(
+            'Storage',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          leading: const Icon(Icons.folder_outlined),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/settings/storage'),
+        ),
+        ListTile(
+          title: const Text(
+            'Requests',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          leading: const Icon(Icons.mail_outline),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/settings/requests'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ServerSection extends StatelessWidget {
   const _ServerSection();
 
@@ -128,6 +162,7 @@ class _ServerSection extends StatelessWidget {
         return Column(
           children: [
             ListTile(
+              leading: const Icon(Icons.dns),
               title: Row(
                 children: [
                   const Text(
@@ -161,6 +196,7 @@ class _ServerSection extends StatelessWidget {
                 );
 
                 return ListTile(
+                  leading: const Icon(Icons.info_outline),
                   title: Row(
                     children: [
                       const Text(
@@ -269,63 +305,44 @@ class _DebugSection extends StatelessWidget {
           children: [
             if (state.debugMode) ...[
               ListTile(
-                title: const Text(
-                  'Enable Discord RPC',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+                leading: const Icon(Icons.webhook),
+                title: const Text('Enable Discord RPC'),
                 trailing: Switch.adaptive(
                   value: state.discordRPCEnabled,
                   onChanged: (value) {
                     context.read<SettingsCubit>().setDiscordRPCEnabled(value);
                   },
                 ),
-                onTap: () {
-                  context.read<SettingsCubit>().setDiscordRPCEnabled(
-                    !state.discordRPCEnabled,
-                  );
-                },
               ),
               ListTile(
-                title: const Text(
-                  "Don't play sound",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+                leading: const Icon(Icons.volume_off),
+                title: const Text("Don't play sound"),
                 trailing: Switch.adaptive(
                   value: state.dummySoundEnabled,
                   onChanged: (value) {
                     context.read<SettingsCubit>().setDummySoundEnabled(value);
                   },
                 ),
-                onTap: () {
-                  context.read<SettingsCubit>().setDummySoundEnabled(
-                    !state.dummySoundEnabled,
-                  );
-                },
               ),
               ListTile(
+                leading: const Icon(Icons.delete_forever, color: Colors.red),
                 title: const Text(
                   'Wipe local database',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.red),
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Icons.chevron_right, color: Colors.red),
                 onTap: () => _showWipeDatabaseDialog(context),
               ),
             ],
-            const Divider(),
             ListTile(
-              title: const Text(
-                'Debug mode',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              leading: const Icon(Icons.bug_report),
+              title: const Text('Debug mode'),
               trailing: Switch.adaptive(
                 value: state.debugMode,
                 onChanged: (value) {
                   context.read<SettingsCubit>().setDebugMode(value);
                 },
               ),
-              onTap: () {
-                context.read<SettingsCubit>().setDebugMode(!state.debugMode);
-              },
             ),
           ],
         );
@@ -372,6 +389,7 @@ class _AboutSection extends StatelessWidget {
     return Column(
       children: [
         ListTile(
+          leading: const Icon(Icons.gavel),
           title: const Text(
             'Show legal',
             style: TextStyle(fontWeight: FontWeight.w600),
@@ -380,6 +398,7 @@ class _AboutSection extends StatelessWidget {
           onTap: () => context.push('/settings/eula'),
         ),
         ListTile(
+          leading: const Icon(Icons.info),
           title: const Text(
             'About',
             style: TextStyle(fontWeight: FontWeight.w600),

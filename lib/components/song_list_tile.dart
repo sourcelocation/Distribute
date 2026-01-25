@@ -36,6 +36,7 @@ class SongListTile extends StatelessWidget {
             ),
       onTap: onAdd ?? onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+      dense: true,
     );
   }
 }

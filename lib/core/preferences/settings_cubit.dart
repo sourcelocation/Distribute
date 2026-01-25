@@ -14,10 +14,12 @@ class SettingsCubit extends Cubit<SettingsState> {
           discordRPCEnabled: _repo.discordRPCEnabled,
           dummySoundEnabled: _repo.dummySoundEnabled,
           debugMode: _repo.debugMode,
+          customDownloadPath: _repo.customDownloadPath,
+          defaultDataPath: _repo.defaultDataPath,
         ),
       );
 
-  void setServerURL(String url) async {
+  Future<void> setServerURL(String url) async {
     await _repo.setServerURL(url);
     emit(state.copyWith(serverURL: url));
   }
@@ -45,5 +47,10 @@ class SettingsCubit extends Cubit<SettingsState> {
   void setDebugMode(bool enabled) async {
     await _repo.setDebugMode(enabled);
     emit(state.copyWith(debugMode: enabled));
+  }
+
+  Future<void> setCustomDownloadPath(String? path) async {
+    await _repo.setCustomDownloadPath(path);
+    emit(state.copyWith(customDownloadPath: path));
   }
 }

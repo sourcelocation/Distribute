@@ -74,7 +74,7 @@ class SearchScreen extends StatelessWidget {
                 remoteResults.isEmpty &&
                 !isRemoteLoading) {
               return SearchNotFoundWidget(
-                onRequestTap: () => context.go('/requests'),
+                onRequestTap: () => context.go('/settings/requests'),
               );
             }
 

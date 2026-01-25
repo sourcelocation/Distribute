@@ -67,9 +67,9 @@ class RequestsScreenState extends State<RequestsScreen> {
           child: SingleChildScrollView(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                20.0,
+                16.0,
                 20.0 + kToolbarHeight + MediaQuery.of(context).padding.top,
-                20.0,
+                16.0,
                 20.0 + MediaQuery.of(context).padding.bottom,
               ),
               child: Column(

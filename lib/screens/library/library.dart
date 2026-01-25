@@ -150,12 +150,16 @@ class LibraryScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.folder_open, size: 24, color: scheme.secondary),
-                SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    "Woah, such empty!",
-                    style: TextStyle(color: scheme.secondary),
+                Icon(
+                  Icons.folder_open_rounded,
+                  size: 48,
+                  color: scheme.secondary.withAlpha(100),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Woah, such empty!",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: scheme.secondary.withAlpha(150),
                   ),
                 ),
               ],

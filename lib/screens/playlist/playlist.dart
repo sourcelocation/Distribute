@@ -12,7 +12,6 @@ import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:distributeapp/screens/playlist/playlist_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:io';
 import 'package:distributeapp/core/service_locator.dart';
 import 'package:go_router/go_router.dart';
 
@@ -246,6 +245,7 @@ class _SongTileState extends State<_SongTile> {
         },
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+      dense: true,
       onLongPress: () => _showOptions(context),
       onTap: _onTap,
     );
@@ -308,8 +308,7 @@ class _SongTileState extends State<_SongTile> {
 
   void _onTap() async {
     final controller = sl<MusicPlayerController>();
-    final path = widget.song.localPath(controller.appDataPath);
-    final fileExists = await File(path).exists();
+    final fileExists = await controller.isSongAvailable(widget.song);
 
     if (fileExists && mounted) {
       widget.onPlay();

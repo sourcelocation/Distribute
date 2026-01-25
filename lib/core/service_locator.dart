@@ -33,6 +33,8 @@ import 'package:distributeapp/repositories/auth_repository.dart';
 import 'package:distributeapp/repositories/folder_repository.dart';
 import 'package:distributeapp/repositories/playlist_repository.dart';
 import 'package:distributeapp/repositories/search_repository.dart';
+import 'package:distributeapp/repositories/storage_repository.dart';
+import 'package:distributeapp/blocs/storage/storage_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -55,7 +57,9 @@ Future<void> initDependencies() async {
   sl.registerSingleton<AppDatabase>(AppDatabase());
   sl.registerSingleton<Dio>(Dio());
   // early because baseurl is needed
-  sl.registerSingleton<SettingsRepository>(SettingsRepository(sl()));
+  sl.registerSingleton<SettingsRepository>(
+    SettingsRepository(sl(), appDataPath),
+  );
 
   final dio = sl<Dio>();
   final settingsRepo = sl<SettingsRepository>();
@@ -91,9 +95,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => SearchApi(sl()));
   sl.registerLazySingleton(() => SongsApi(sl()));
   sl.registerLazySingleton(() => PlaylistsApi(client: sl(), authRepo: sl()));
-  sl.registerLazySingleton(
-    () => DownloadApi(client: sl(), appDataPath: appDataPath),
-  );
+  sl.registerLazySingleton(() => DownloadApi(client: sl(), settings: sl()));
 
   final syncManager = SyncManager(
     sl<AuthRepository>(),
@@ -116,12 +118,11 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => SearchRepository(sl<AppDatabase>().searchDao, sl<SearchApi>()),
   );
-  sl.registerLazySingleton(() => ArtworkRepository(sl(), appDataPath));
+  sl.registerLazySingleton(() => ArtworkRepository(sl(), settings: sl()));
 
   final musicController = MusicPlayerController(
     artworkRepository: sl<ArtworkRepository>(),
     settingsRepository: sl<SettingsRepository>(),
-    appDataPath: appDataPath,
     playlistRepository: sl<PlaylistRepository>(),
     downloadApi: sl<DownloadApi>(),
   );
@@ -143,4 +144,14 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => PositionCubit(controller: sl(), musicCubit: sl()));
   sl.registerFactory(() => DownloadCubit(sl(), sl<PlaylistRepository>()));
   sl.registerFactory(() => SyncCubit(sl()));
+
+  sl.registerLazySingleton(() => StorageRepository());
+  sl.registerFactory(
+    () => StorageCubit(
+      storageRepository: sl(),
+      settingsCubit: sl(),
+      artworkRepository: sl(),
+      musicPlayerController: sl(),
+    ),
+  );
 }

@@ -30,9 +30,9 @@ class SettingsProfileHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4.0),
-                  const Text(
-                    'Beta Tester',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  Text(
+                    user.isAdmin ? 'Admin' : 'User',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
               ),

@@ -2,8 +2,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsRepository {
   final SharedPreferences _prefs;
+  final String defaultDataPath;
 
-  SettingsRepository(this._prefs);
+  SettingsRepository(this._prefs, this.defaultDataPath);
+
+  String get rootPath => customDownloadPath ?? defaultDataPath;
 
   static const _kServerURL = 'server_url';
   static const _kHasAcceptedEula = 'has_accepted_eula';
@@ -11,6 +14,7 @@ class SettingsRepository {
   static const _kDummySoundEnabled = 'dummy_sound_enabled';
   static const _kDebugMode = 'debug_mode';
   static const _kOnboardingCompleted = 'onboarding_completed';
+  static const _kCustomDownloadPath = 'custom_download_path';
 
   String get serverURL {
     return _prefs.getString(_kServerURL) ?? '';
@@ -57,5 +61,17 @@ class SettingsRepository {
 
   Future<void> setDebugMode(bool enabled) async {
     await _prefs.setBool(_kDebugMode, enabled);
+  }
+
+  String? get customDownloadPath {
+    return _prefs.getString(_kCustomDownloadPath);
+  }
+
+  Future<void> setCustomDownloadPath(String? path) async {
+    if (path == null) {
+      await _prefs.remove(_kCustomDownloadPath);
+    } else {
+      await _prefs.setString(_kCustomDownloadPath, path);
+    }
   }
 }

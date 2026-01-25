@@ -13,6 +13,7 @@ import 'package:distributeapp/screens/playlist/playlist.dart';
 import 'package:distributeapp/screens/request.dart';
 import 'package:distributeapp/screens/search/search.dart';
 import 'package:distributeapp/screens/settings/settings.dart';
+import 'package:distributeapp/screens/settings/storage_settings.dart';
 import 'package:distributeapp/core/preferences/settings_repository.dart';
 import 'package:distributeapp/core/preferences/settings_cubit.dart';
 import 'package:distributeapp/repositories/playlist_repository.dart';
@@ -211,14 +212,6 @@ final GoRouter router = GoRouter(
         StatefulShellBranch(
           routes: <RouteBase>[
             GoRoute(
-              path: '/requests',
-              builder: (context, state) => const RequestsScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: <RouteBase>[
-            GoRoute(
               path: '/settings',
               builder: (context, state) => const SettingsScreen(),
               routes: [
@@ -256,6 +249,14 @@ final GoRouter router = GoRouter(
                     ),
                     body: const SignupPage(),
                   ),
+                ),
+                GoRoute(
+                  path: 'storage',
+                  builder: (context, state) => const StorageSettingsScreen(),
+                ),
+                GoRoute(
+                  path: 'requests',
+                  builder: (context, state) => const RequestsScreen(),
                 ),
               ],
             ),
@@ -460,16 +461,10 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
     super.dispose();
   }
 
-  final appScreens = const [
-    LibraryScreen(),
-    SearchScreen(),
-    RequestsScreen(),
-    SettingsScreen(),
-  ];
+  final appScreens = const [LibraryScreen(), SearchScreen(), SettingsScreen()];
   final navigationDestinations = const [
     NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
     NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
-    NavigationDestination(icon: Icon(Icons.mail), label: 'Request'),
     NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
   ];
 

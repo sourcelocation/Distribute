@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:distributeapp/core/preferences/settings_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -38,9 +40,14 @@ enum ArtQuality { hq, lq }
 class ArtworkRepository {
   final Map<String, ArtworkData> _memoryCache = {};
   final Dio client;
-  final String appDataPath;
+  final SettingsRepository settings;
 
-  ArtworkRepository(this.client, this.appDataPath);
+  ArtworkRepository(this.client, {required this.settings});
+
+  void clearCache() {
+    _memoryCache.clear();
+    _pendingDownloads.clear();
+  }
 
   final Map<String, Future<File>> _pendingDownloads = {};
 
@@ -155,6 +162,7 @@ class ArtworkRepository {
   }
 
   String getAbsolutePath(String albumId, ArtQuality quality) {
-    return '$appDataPath/${getRelativePath(albumId, quality)}';
+    final root = settings.rootPath;
+    return '$root/${getRelativePath(albumId, quality)}';
   }
 }

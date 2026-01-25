@@ -29,7 +29,6 @@ class SearchNotFoundWidget extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                context.go('/requests');
                 onRequestTap?.call();
               },
               child: const Text("Request a song"),

@@ -23,7 +23,13 @@ class LibraryRowWidget extends StatelessWidget {
       leading: LibraryLeadingIcon(albumId: albumId, isFolder: isFolder),
       trailing: const Icon(Icons.chevron_right),
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      dense: true,
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       onTap: onTap,
       onLongPress: onLongPress,
     );

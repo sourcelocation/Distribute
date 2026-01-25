@@ -54,11 +54,17 @@ class MusicPlayerController {
   final SettingsRepository settingsRepository;
   final PlaylistRepository playlistRepository;
   final DownloadApi downloadApi;
-  final String appDataPath;
 
   late final AudioBackend _audioBackend;
   late final QueueManager _queueManager;
   late final DiscordPresenceManager _discordManager;
+
+  String get rootPath => settingsRepository.rootPath;
+
+  Future<bool> isSongAvailable(Song song) async {
+    final localPath = song.localPath(rootPath);
+    return await File(localPath).exists();
+  }
 
   List<Song>? _lastProcessedQueue;
   final Map<String, MediaItem> _mediaItemCache = {};
@@ -80,7 +86,6 @@ class MusicPlayerController {
     required this.settingsRepository,
     required this.playlistRepository,
     required this.downloadApi,
-    required this.appDataPath,
   }) {
     _audioBackend = AudioBackend(
       dummySoundEnabled: settingsRepository.dummySoundEnabled,
@@ -89,7 +94,6 @@ class MusicPlayerController {
     _discordManager = DiscordPresenceManager(
       artworkRepository: artworkRepository,
       settingsRepository: settingsRepository,
-      appDataPath: appDataPath,
     );
 
     _discordManager.listenTo(stateStream);
@@ -124,7 +128,7 @@ class MusicPlayerController {
   // --- Playback Actions ---
 
   Future<void> playSong(Song song) async {
-    final isAvailable = await _isFileAvailableLocally(song);
+    final isAvailable = await isSongAvailable(song);
     if (!isAvailable) return;
 
     // Setting queue sets index=0
@@ -189,6 +193,11 @@ class MusicPlayerController {
     );
   }
 
+  void clearCache() {
+    _mediaItemCache.clear();
+    _lastProcessedQueue = null;
+  }
+
   Future<void> seek(Duration position) async {
     _audioBackend.seek(position);
     _emitState(_state.copyWith(position: position));
@@ -248,7 +257,9 @@ class MusicPlayerController {
           // Just update metadata.
           _loadArtworkForSong(newSong);
 
-          final localPath = newSong.localPath(appDataPath);
+          _loadArtworkForSong(newSong);
+
+          final localPath = newSong.localPath(rootPath);
           final mediaItem = await _createMediaItem(
             newSong,
             localPath: localPath,
@@ -322,13 +333,13 @@ class MusicPlayerController {
   }
 
   Future<void> _playEntry(Song song) async {
-    final isAvailable = await _isFileAvailableLocally(song);
+    final isAvailable = await isSongAvailable(song);
     if (!isAvailable) {
       _emitState(_state.copyWith(processingState: AudioProcessingState.error));
       return;
     }
 
-    final localPath = song.localPath(appDataPath);
+    final localPath = song.localPath(rootPath);
 
     // 2. Emit loading state immediately to update UI
     // We construct a basic media item first to update UI instantly.
@@ -380,15 +391,10 @@ class MusicPlayerController {
     final nextIndex = _queueManager.getNextIndex();
     if (nextIndex != null) {
       final nextSong = _queueManager.state.queue[nextIndex];
-      if (await _isFileAvailableLocally(nextSong)) {
-        await _audioBackend.preload(nextSong.localPath(appDataPath));
+      if (await isSongAvailable(nextSong)) {
+        await _audioBackend.preload(nextSong.localPath(rootPath));
       }
     }
-  }
-
-  Future<bool> _isFileAvailableLocally(Song song) async {
-    final localPath = song.localPath(appDataPath);
-    return await File(localPath).exists();
   }
 
   Future<void> _loadArtworkForSong(Song? song) async {
@@ -433,13 +439,12 @@ class MusicPlayerController {
         );
       }
       duration = Duration(
-        milliseconds:
-            (await song.getDuration(appDataPath))?.inMilliseconds ?? 0,
+        milliseconds: (await song.getDuration(rootPath))?.inMilliseconds ?? 0,
       );
     }
 
     // Resolve path if not provided but needed
-    final resolvedPath = localPath ?? song.localPath(appDataPath);
+    final resolvedPath = localPath ?? song.localPath(rootPath);
 
     final item = MediaItem(
       id: song.id.toString(),
@@ -462,7 +467,7 @@ class MusicPlayerController {
   }
 
   Future<Uri> _getArtUriFromAsset(String assetPath) async {
-    final file = File('$appDataPath/$assetPath');
+    final file = File('$rootPath/$assetPath');
     if (!await file.parent.exists()) {
       await file.parent.create(recursive: true);
     }
