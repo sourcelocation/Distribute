@@ -10,11 +10,18 @@ part 'music_player_bloc.freezed.dart';
 class MusicPlayerEvent with _$MusicPlayerEvent {
   const factory MusicPlayerEvent.started() = _Started;
   const factory MusicPlayerEvent.playSong(Song song) = _PlaySong;
+  const factory MusicPlayerEvent.playPlaylist(
+    List<Song> songs,
+    int initialIndex,
+  ) = _PlayPlaylist;
   const factory MusicPlayerEvent.play() = _Play;
   const factory MusicPlayerEvent.pause() = _Pause;
   const factory MusicPlayerEvent.togglePlayPause() = _TogglePlayPause;
   const factory MusicPlayerEvent.stop() = _Stop;
   const factory MusicPlayerEvent.seek(Duration position) = _Seek;
+  const factory MusicPlayerEvent.skipToQueueItem(int index) = _SkipToQueueItem;
+  const factory MusicPlayerEvent.skipToNext() = _SkipToNext;
+  const factory MusicPlayerEvent.skipToPrevious() = _SkipToPrevious;
 }
 
 class MusicPlayerBloc extends Bloc<MusicPlayerEvent, ControllerState> {
@@ -26,11 +33,15 @@ class MusicPlayerBloc extends Bloc<MusicPlayerEvent, ControllerState> {
     on<_Started>(_onStarted);
 
     on<_PlaySong>(_onPlaySong);
+    on<_PlayPlaylist>(_onPlayPlaylist);
     on<_Play>(_onPlay);
     on<_Pause>(_onPause);
     on<_TogglePlayPause>(_onTogglePlayPause);
     on<_Stop>(_onStop);
     on<_Seek>(_onSeek);
+    on<_SkipToQueueItem>(_onSkipToQueueItem);
+    on<_SkipToNext>(_onSkipToNext);
+    on<_SkipToPrevious>(_onSkipToPrevious);
 
     add(const MusicPlayerEvent.started());
   }
@@ -47,6 +58,13 @@ class MusicPlayerBloc extends Bloc<MusicPlayerEvent, ControllerState> {
     Emitter<ControllerState> emit,
   ) async {
     await _controller.playSong(event.song);
+  }
+
+  Future<void> _onPlayPlaylist(
+    _PlayPlaylist event,
+    Emitter<ControllerState> emit,
+  ) async {
+    await _controller.playSongFromPlaylist(event.songs, event.initialIndex);
   }
 
   Future<void> _onPlay(_Play event, Emitter<ControllerState> emit) async {
@@ -70,5 +88,26 @@ class MusicPlayerBloc extends Bloc<MusicPlayerEvent, ControllerState> {
 
   Future<void> _onSeek(_Seek event, Emitter<ControllerState> emit) async {
     await _controller.seek(event.position);
+  }
+
+  Future<void> _onSkipToQueueItem(
+    _SkipToQueueItem event,
+    Emitter<ControllerState> emit,
+  ) async {
+    await _controller.playFromQueueIndex(event.index);
+  }
+
+  Future<void> _onSkipToNext(
+    _SkipToNext event,
+    Emitter<ControllerState> emit,
+  ) async {
+    await _controller.playNext();
+  }
+
+  Future<void> _onSkipToPrevious(
+    _SkipToPrevious event,
+    Emitter<ControllerState> emit,
+  ) async {
+    await _controller.playPrevious();
   }
 }

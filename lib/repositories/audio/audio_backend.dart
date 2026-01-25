@@ -5,8 +5,16 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 
 class AudioBackend {
   AudioSession? _session;
-  SoundHandle? _soundHandle;
   final bool _dummySoundEnabled;
+  _PlaybackJob? _currentJob;
+  _PlaybackJob? _preparedJob;
+
+  final _songFinishedController = StreamController<void>.broadcast();
+  Stream<void> get onSongFinished => _songFinishedController.stream;
+
+  final _gaplessTransitionController = StreamController<String>.broadcast();
+  Stream<String> get onAutomaticSongTransition =>
+      _gaplessTransitionController.stream;
 
   AudioBackend({bool dummySoundEnabled = false})
     : _dummySoundEnabled = dummySoundEnabled;
@@ -21,77 +29,118 @@ class AudioBackend {
     );
 
     _session = await AudioSession.instance;
-    // await _session!.configure(
-    //   const AudioSessionConfiguration(
-    //     avAudioSessionCategory: AVAudioSessionCategory.ambient,
-    //     avAudioSessionCategoryOptions:
-    //         AVAudioSessionCategoryOptions.mixWithOthers,
-    //     avAudioSessionMode: AVAudioSessionMode.defaultMode,
-    //     avAudioSessionRouteSharingPolicy:
-    //         AVAudioSessionRouteSharingPolicy.defaultPolicy,
-    //     androidAudioAttributes: AndroidAudioAttributes(
-    //       contentType: AndroidAudioContentType.music,
-    //       flags: AndroidAudioFlags.none,
-    //       usage: AndroidAudioUsage.media,
-    //     ),
-    //     androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-    //     androidWillPauseWhenDucked: true,
-    //   ),
-    // );
+    await _session!.configure(AudioSessionConfiguration.music());
     _handleInterruptions(_session!);
   }
 
   Future<void> play(String localPath) async {
     if (_dummySoundEnabled) return;
 
-    await _session!.configure(AudioSessionConfiguration.music());
-
-    await stop(disposeSession: false);
-    await _session?.setActive(true);
+    // 1. If we have a prepared job for this path, use it.
+    if (_preparedJob?.path == localPath && _preparedJob!.isLoaded) {
+      await stop(disposeSession: false, clearPrepared: false);
+      _currentJob = _preparedJob;
+      _preparedJob = null;
+    } else {
+      // Regular play: Stop everything and load new.
+      await stop(disposeSession: false);
+      _currentJob = _PlaybackJob(localPath, _session!, _onJobFinished);
+      await _currentJob!.load();
+    }
 
     try {
-      final source = await SoLoud.instance.loadFile(localPath);
-      _soundHandle = await SoLoud.instance.play(source);
+      await _currentJob!.play();
+      await _session?.setActive(true);
     } catch (e) {
+      // If job was cancelled by a newer one, we ignore error
       debugPrint('AudioBackend Error: $e');
       rethrow;
     }
   }
 
-  Future<void> stop({bool disposeSession = true}) async {
-    if (_soundHandle != null) {
-      SoLoud.instance.stop(_soundHandle!);
-      SoLoud.instance.disposeAllSources();
-      _soundHandle = null;
+  Future<void> preload(String localPath) async {
+    if (_dummySoundEnabled) return;
+
+    // If we are already preloaded with this path, do nothing.
+    if (_preparedJob?.path == localPath) return;
+
+    // Clear old prepared job
+    await _preparedJob?.stop();
+
+    final job = _PlaybackJob(localPath, _session!, _onJobFinished);
+    _preparedJob = job;
+
+    try {
+      await job.load();
+    } catch (e) {
+      debugPrint("Preload error: $e");
+      if (_preparedJob == job) _preparedJob = null;
     }
+  }
+
+  Future<void> stop({
+    bool disposeSession = true,
+    bool clearPrepared = true,
+  }) async {
+    if (_currentJob != null) {
+      await _currentJob!.stop();
+      _currentJob = null;
+    }
+
+    if (clearPrepared && _preparedJob != null) {
+      await _preparedJob!.stop();
+      _preparedJob = null;
+    }
+
     if (disposeSession) {
       await _session?.setActive(false);
     }
   }
 
-  void pause() {
-    if (_soundHandle != null) {
-      SoLoud.instance.setPause(_soundHandle!, true);
+  void _onJobFinished(_PlaybackJob job) {
+    if (_currentJob != job) return;
+
+    if (_preparedJob != null && _preparedJob!.isLoaded) {
+      // GAPLESS TRANSITION
+      debugPrint("AudioBackend: Gapless transition to ${_preparedJob!.path}");
+
+      // Swap
+      final oldJob = _currentJob;
+      _currentJob = _preparedJob;
+      _preparedJob = null;
+
+      // Start next
+      _currentJob!.play().then((_) {
+        _gaplessTransitionController.add(_currentJob!.path);
+      });
+
+      // Cleanup old (it's already finished, but we need to dispose source)
+      oldJob?.stop();
+    } else {
+      // End of queue
+      _songFinishedController.add(null);
     }
+  }
+
+  void pause() {
+    _currentJob?.pause();
   }
 
   void resume() {
-    if (_soundHandle != null) {
-      SoLoud.instance.setPause(_soundHandle!, false);
-    }
+    _currentJob?.resume();
   }
 
   void seek(Duration position) {
-    if (_soundHandle != null &&
-        SoLoud.instance.getIsValidVoiceHandle(_soundHandle!)) {
-      SoLoud.instance.seek(_soundHandle!, position);
-    }
+    _currentJob?.seek(position);
   }
 
   Duration getPosition() {
-    if (_soundHandle == null) return Duration.zero;
-    final seconds = SoLoud.instance.getPosition(_soundHandle!);
-    return Duration(milliseconds: seconds.inMilliseconds);
+    return _currentJob?.getPosition() ?? Duration.zero;
+  }
+
+  void dispose() {
+    _songFinishedController.close();
+    _gaplessTransitionController.close();
   }
 
   void _handleInterruptions(AudioSession session) {
@@ -127,5 +176,91 @@ class AudioBackend {
         }
       }
     });
+  }
+}
+
+typedef _JobCallback = void Function(_PlaybackJob job);
+
+class _PlaybackJob {
+  final String path;
+  final AudioSession session;
+  final _JobCallback onFinished;
+
+  AudioSource? _source;
+  SoundHandle? _handle;
+  StreamSubscription? _eventSub;
+
+  bool _isCancelled = false;
+  bool _isManualStop = false;
+  bool isLoaded = false;
+
+  _PlaybackJob(this.path, this.session, this.onFinished);
+
+  Future<void> load() async {
+    if (_isCancelled) return;
+
+    try {
+      final source = await SoLoud.instance.loadFile(path);
+      if (_isCancelled) {
+        SoLoud.instance.disposeSource(source);
+        return;
+      }
+      _source = source;
+      isLoaded = true;
+
+      _eventSub = source.soundEvents.listen((event) {
+        if (event.event == SoundEventType.handleIsNoMoreValid &&
+            !_isManualStop &&
+            _handle != null) {
+          if (event.handle == _handle!) {
+            onFinished(this);
+          }
+        }
+      });
+    } catch (e) {
+      if (!_isCancelled) rethrow;
+    }
+  }
+
+  Future<void> play() async {
+    if (_isCancelled || !isLoaded || _source == null) return;
+    _handle = await SoLoud.instance.play(_source!);
+  }
+
+  Future<void> stop() async {
+    _isCancelled = true;
+    _isManualStop = true;
+
+    if (_handle != null) {
+      SoLoud.instance.stop(_handle!);
+      _handle = null;
+    }
+
+    if (_source != null) {
+      SoLoud.instance.disposeSource(_source!);
+      _source = null;
+    }
+
+    await _eventSub?.cancel();
+  }
+
+  void pause() {
+    if (_handle != null) SoLoud.instance.setPause(_handle!, true);
+  }
+
+  void resume() {
+    if (_handle != null) SoLoud.instance.setPause(_handle!, false);
+  }
+
+  void seek(Duration pos) {
+    if (_handle != null && SoLoud.instance.getIsValidVoiceHandle(_handle!)) {
+      SoLoud.instance.seek(_handle!, pos);
+    }
+  }
+
+  Duration getPosition() {
+    if (_handle == null) return Duration.zero;
+    final s = SoLoud.instance.getPosition(_handle!);
+    return Duration(milliseconds: s.inMilliseconds);
   }
 }

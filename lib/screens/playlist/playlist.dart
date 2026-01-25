@@ -148,7 +148,15 @@ class PlaylistScreen extends StatelessWidget {
           }
           final song = songs[index - 1];
 
-          return _SongTile(key: ValueKey(song.id), song: song);
+          return _SongTile(
+            key: ValueKey(song.id),
+            song: song,
+            onPlay: () {
+              context.read<MusicPlayerBloc>().add(
+                MusicPlayerEvent.playPlaylist(songs, index - 1),
+              );
+            },
+          );
         },
       ),
     );
@@ -177,8 +185,9 @@ class PlaylistScreen extends StatelessWidget {
 
 class _SongTile extends StatefulWidget {
   final Song song;
+  final VoidCallback onPlay;
 
-  const _SongTile({super.key, required this.song});
+  const _SongTile({super.key, required this.song, required this.onPlay});
 
   @override
   State<_SongTile> createState() => _SongTileState();
@@ -303,8 +312,7 @@ class _SongTileState extends State<_SongTile> {
     final fileExists = await File(path).exists();
 
     if (fileExists && mounted) {
-      final mp = context.read<MusicPlayerBloc>();
-      mp.add(MusicPlayerEvent.playSong(widget.song));
+      widget.onPlay();
       return;
     }
 

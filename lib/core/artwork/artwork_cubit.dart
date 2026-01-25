@@ -10,6 +10,7 @@ class ArtworkCubit extends Cubit<ArtworkState> {
   ArtworkCubit(this.repository) : super(ArtworkInitial());
 
   Future<void> loadImage(String albumId, ArtQuality quality) async {
+    if (isClosed) return;
     if (state is ArtworkVisible) {
       final currentState = state as ArtworkVisible;
       final expectedPath = repository.getAbsolutePath(albumId, quality);
@@ -22,6 +23,7 @@ class ArtworkCubit extends Cubit<ArtworkState> {
 
     try {
       final result = await repository.getArtworkData(albumId, quality);
+      if (isClosed) return;
 
       final File? targetFile = quality == ArtQuality.hq
           ? result.imageFileHq
@@ -39,7 +41,9 @@ class ArtworkCubit extends Cubit<ArtworkState> {
         emit(ArtworkError("Image file missing in data"));
       }
     } catch (e) {
-      emit(ArtworkError(e.toString()));
+      if (!isClosed) {
+        emit(ArtworkError(e.toString()));
+      }
     }
   }
 }

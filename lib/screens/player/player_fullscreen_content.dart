@@ -1,9 +1,12 @@
 import 'dart:ui';
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/screens/player/player_slider.dart';
+import 'package:distributeapp/screens/player/queue_sheet.dart';
 import 'package:distributeapp/screens/player/vinyl.dart';
 import 'package:distributeapp/core/artwork/artwork_repository.dart';
+import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:io';
 
 class FullPlayerContent extends StatelessWidget {
@@ -45,9 +48,29 @@ class FullPlayerContent extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: onCloseTap,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      useRootNavigator: true,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => const QueueSheet(),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white,
+                  ),
+                  onPressed: onCloseTap,
+                ),
+              ],
             ),
           ),
         ],
@@ -155,7 +178,7 @@ class FullPlayerContent extends StatelessWidget {
                                     color: artworkData.tintedColor(),
                                   ),
                                 if (showAll) SizedBox(width: gap2),
-                                if (showAll)
+                                if (showAll && currentSong?.format == "flac")
                                   QualityTagWidget(
                                     title: bitrate,
                                     color: artworkData.tintedColor(),
@@ -183,7 +206,11 @@ class FullPlayerContent extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             IconButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                context.read<MusicPlayerBloc>().add(
+                                  const MusicPlayerEvent.skipToPrevious(),
+                                );
+                              },
                               iconSize: 56,
                               color: artworkData.tintedColor(),
                               icon: const Icon(Icons.fast_rewind_rounded),
@@ -201,7 +228,11 @@ class FullPlayerContent extends StatelessWidget {
                             ),
                             const SizedBox(width: 32),
                             IconButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                context.read<MusicPlayerBloc>().add(
+                                  const MusicPlayerEvent.skipToNext(),
+                                );
+                              },
                               iconSize: 56,
                               color: artworkData.tintedColor(),
                               icon: const Icon(Icons.fast_forward_rounded),

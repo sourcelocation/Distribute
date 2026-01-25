@@ -71,6 +71,12 @@ class AppAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
       _controller.playFromQueueIndex(index);
 
   @override
+  Future<void> skipToNext() => _controller.playNext();
+
+  @override
+  Future<void> skipToPrevious() => _controller.playPrevious();
+
+  @override
   Future<void> addQueueItem(MediaItem mediaItem) =>
       _controller.registerExternalQueueItem(mediaItem);
 }
