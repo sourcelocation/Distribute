@@ -154,7 +154,7 @@ jobs:
     - name: Create unsigned IPA
       run: |
         APP_BUNDLE="build/ios/iphoneos/Runner.app"
-        IPA_PATH="build/ios/iphoneos/DistributeApp.ipa"
+        IPA_PATH="build/ios/iphoneos/Distribute.ipa"
         mkdir -p Payload
         cp -R "$APP_BUNDLE" Payload/
         zip -r "$IPA_PATH" Payload
@@ -199,8 +199,8 @@ jobs:
         fi
         
         mkdir -p dist
-        APP_PATH="build/macos/Build/Products/Release/DistributeApp.app"
-        APP_NAME="DistributeApp"
+        APP_PATH="build/macos/Build/Products/Release/Distribute.app"
+        APP_NAME="Distribute"
         TEMP_DIR="temp_dmg_source"
         DMG_NAME="dist/${APP_NAME}-${{ github.sha }}.dmg"
         
@@ -262,13 +262,13 @@ jobs:
         
         chmod +x linuxdeploy*.AppImage
         
-        cp assets/icon/icon-rounded.png distributeapp.png
+        cp assets/icon/icon-rounded.png distribute.png
         
         ./linuxdeploy-x86_64.AppImage \
           --appdir AppDir \
-          --executable build/linux/x64/release/bundle/DistributeApp \
+          --executable build/linux/x64/release/bundle/Distribute \
           --desktop-file linux/net.sourceloc.distributeapp.desktop \
-          --icon-file distributeapp.png \
+          --icon-file distribute.png \
           --output appimage
       env:
         APPIMAGE_EXTRACT_AND_RUN: 1 

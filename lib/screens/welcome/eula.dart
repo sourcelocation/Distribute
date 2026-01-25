@@ -19,7 +19,7 @@ class EulaScreen extends StatelessWidget {
   final bool isOnboarding;
   final VoidCallback? onBack;
 
-  static const String appName = "DistributeApp";
+  static const String appName = "Distribute";
 
   static const String legalTitle = "Legal Disclaimer & Terms of Use";
   static const String legalSubtitle = "End-User License Agreement (EULA)";
