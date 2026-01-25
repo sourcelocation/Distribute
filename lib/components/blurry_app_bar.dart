@@ -1,13 +1,23 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:distributeapp/components/hoverable_icon_button.dart';
+import 'package:distributeapp/theme/app_icons.dart';
+import 'package:go_router/go_router.dart';
 
 class BlurryAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final Widget? center;
   final List<Widget>? actions;
+  final bool automaticallyImplyLeading;
 
-  const BlurryAppBar({super.key, this.leading, this.center, this.actions});
+  const BlurryAppBar({
+    super.key,
+    this.leading,
+    this.center,
+    this.actions,
+    this.automaticallyImplyLeading = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +25,15 @@ class BlurryAppBar extends StatelessWidget implements PreferredSizeWidget {
     final double macLeadingOffset = isMac ? 70.0 : 0.0;
 
     Widget? effectiveLeading = leading;
+    if (effectiveLeading == null &&
+        automaticallyImplyLeading &&
+        context.canPop()) {
+      effectiveLeading = HoverableIconButton(
+        icon: Icon(AppIcons.arrowBack),
+        onPressed: () => context.pop(),
+        color: Theme.of(context).colorScheme.secondary,
+      );
+    }
 
     final double titleLeftPadding = (isMac && effectiveLeading == null)
         ? macLeadingOffset
@@ -23,7 +42,7 @@ class BlurryAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
-      automaticallyImplyLeading: true,
+      automaticallyImplyLeading: automaticallyImplyLeading,
       leading: effectiveLeading,
       leadingWidth: isMac ? 186 : null,
       title: Padding(

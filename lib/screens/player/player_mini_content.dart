@@ -1,5 +1,7 @@
 import 'package:distributeapp/model/song.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:distributeapp/components/hoverable_icon_button.dart';
 
 class MiniPlayerContent extends StatelessWidget {
   final Song? currentSong;
@@ -73,10 +75,10 @@ class MiniPlayerContent extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
+            HoverableIconButton(
               onPressed: onPlayPressed,
               icon: Icon(
-                isPlaying ? Icons.pause : Icons.play_arrow,
+                isPlaying ? AppIcons.pause : AppIcons.play,
                 color: Colors.white,
                 size: 32,
                 shadows: [

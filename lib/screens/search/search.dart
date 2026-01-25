@@ -11,6 +11,7 @@ import 'package:distributeapp/screens/search/rows/song_search_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:distributeapp/components/blurry_app_bar.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:go_router/go_router.dart';
 
 class SearchScreen extends StatelessWidget {
@@ -172,7 +173,7 @@ class SearchScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Icon(
-              Icons.music_note_rounded,
+              AppIcons.musicNoteRounded,
               size: 24,
               color: theme.colorScheme.secondary,
             ),

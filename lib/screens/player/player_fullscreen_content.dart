@@ -5,8 +5,10 @@ import 'package:distributeapp/screens/player/queue_sheet.dart';
 import 'package:distributeapp/screens/player/vinyl.dart';
 import 'package:distributeapp/core/artwork/artwork_repository.dart';
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:distributeapp/components/hoverable_icon_button.dart';
 import 'dart:io';
 
 class FullPlayerContent extends StatelessWidget {
@@ -51,8 +53,8 @@ class FullPlayerContent extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.white),
+                HoverableIconButton(
+                  icon: Icon(AppIcons.menu, color: Colors.white),
                   onPressed: () {
                     showModalBottomSheet(
                       context: context,
@@ -63,11 +65,8 @@ class FullPlayerContent extends StatelessWidget {
                     );
                   },
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white,
-                  ),
+                HoverableIconButton(
+                  icon: Icon(AppIcons.arrowDown, color: Colors.white),
                   onPressed: onCloseTap,
                 ),
               ],
@@ -205,37 +204,35 @@ class FullPlayerContent extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            IconButton(
+                            HoverableIconButton(
                               onPressed: () {
                                 context.read<MusicPlayerBloc>().add(
                                   const MusicPlayerEvent.skipToPrevious(),
                                 );
                               },
-                              iconSize: 56,
+                              iconSize: AppIcons.isCupertino ? 44 : 56,
                               color: artworkData.tintedColor(),
-                              icon: const Icon(Icons.fast_rewind_rounded),
+                              icon: Icon(AppIcons.fastRewind),
                             ),
-                            const SizedBox(width: 32),
-                            IconButton(
+                            SizedBox(width: AppIcons.isCupertino ? 48 : 32),
+                            HoverableIconButton(
                               onPressed: onPlayPause,
-                              iconSize: 70,
+                              iconSize: AppIcons.isCupertino ? 56 : 56,
                               color: artworkData.tintedColor(),
                               icon: Icon(
-                                isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
+                                isPlaying ? AppIcons.pause : AppIcons.play,
                               ),
                             ),
-                            const SizedBox(width: 32),
-                            IconButton(
+                            SizedBox(width: AppIcons.isCupertino ? 48 : 32),
+                            HoverableIconButton(
                               onPressed: () {
                                 context.read<MusicPlayerBloc>().add(
                                   const MusicPlayerEvent.skipToNext(),
                                 );
                               },
-                              iconSize: 56,
+                              iconSize: AppIcons.isCupertino ? 44 : 56,
                               color: artworkData.tintedColor(),
-                              icon: const Icon(Icons.fast_forward_rounded),
+                              icon: Icon(AppIcons.fastForward),
                             ),
                           ],
                         ),

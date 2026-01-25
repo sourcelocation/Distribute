@@ -1,5 +1,6 @@
 import 'package:distributeapp/blocs/auth_cubit.dart';
 import 'package:distributeapp/core/preferences/settings_cubit.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -83,7 +84,7 @@ class _SignupPageState extends State<SignupPage> {
               children: [
                 Center(
                   child: Icon(
-                    Icons.person_add_rounded,
+                    AppIcons.personAdd,
                     size: 64,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -116,7 +117,7 @@ class _SignupPageState extends State<SignupPage> {
                     fillColor: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest.withAlpha(50),
-                    prefixIcon: const Icon(Icons.person),
+                    prefixIcon: Icon(AppIcons.person),
                   ),
                   textInputAction: TextInputAction.next,
                 ),
@@ -133,7 +134,7 @@ class _SignupPageState extends State<SignupPage> {
                     fillColor: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest.withAlpha(50),
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: Icon(AppIcons.lock),
                   ),
                   obscureText: true,
                   textInputAction: TextInputAction.next,
@@ -151,7 +152,7 @@ class _SignupPageState extends State<SignupPage> {
                     fillColor: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest.withAlpha(50),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: Icon(AppIcons.lockOutline),
                   ),
                   obscureText: true,
                   textInputAction: TextInputAction.done,

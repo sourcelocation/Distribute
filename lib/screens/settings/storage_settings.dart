@@ -5,9 +5,11 @@ import 'package:distributeapp/core/preferences/settings_cubit.dart';
 import 'package:distributeapp/core/preferences/settings_state.dart';
 import 'package:distributeapp/components/blurry_app_bar.dart';
 import 'package:distributeapp/core/service_locator.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:distributeapp/components/hoverable_area.dart';
 
 class StorageSettingsScreen extends StatelessWidget {
   const StorageSettingsScreen({super.key});
@@ -281,14 +283,12 @@ class _StorageSettingsViewState extends State<_StorageSettingsView> {
             return Card(
               clipBehavior: Clip.antiAlias,
               elevation: 0,
-              color: Theme.of(context).colorScheme.surface,
+              color: Theme.of(context).colorScheme.surfaceContainer,
               shape: RoundedRectangleBorder(
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: InkWell(
+              child: HoverableArea(
+                borderRadius: BorderRadius.circular(12),
                 onTap: isTransferring
                     ? null
                     : () async {
@@ -308,7 +308,7 @@ class _StorageSettingsViewState extends State<_StorageSettingsView> {
                       Row(
                         children: [
                           Icon(
-                            Icons.folder_open,
+                            AppIcons.folderOpen,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 16),
@@ -335,7 +335,7 @@ class _StorageSettingsViewState extends State<_StorageSettingsView> {
                           ),
                           if (!isTransferring)
                             Icon(
-                              Icons.edit,
+                              AppIcons.edit,
                               size: 16,
                               color: Theme.of(
                                 context,

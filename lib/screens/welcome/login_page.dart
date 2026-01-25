@@ -1,5 +1,6 @@
 import 'package:distributeapp/blocs/auth_cubit.dart';
 import 'package:go_router/go_router.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -89,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 Center(
                   child: Icon(
-                    Icons.account_circle_rounded,
+                    AppIcons.account,
                     size: 64,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -122,7 +123,7 @@ class _LoginPageState extends State<LoginPage> {
                     fillColor: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest.withAlpha(50),
-                    prefixIcon: const Icon(Icons.person),
+                    prefixIcon: Icon(AppIcons.person),
                   ),
                   textInputAction: TextInputAction.next,
                 ),
@@ -139,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                     fillColor: Theme.of(
                       context,
                     ).colorScheme.surfaceContainerHighest.withAlpha(50),
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: Icon(AppIcons.lock),
                   ),
                   obscureText: true,
                   textInputAction: TextInputAction.done,

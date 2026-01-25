@@ -1,3 +1,4 @@
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,7 +15,7 @@ class NotFoundScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.warning_amber_rounded,
+              AppIcons.warning,
               size: 64,
               color: Theme.of(context).colorScheme.primary,
             ),
@@ -53,7 +54,7 @@ class NotFoundScreen extends StatelessWidget {
               onPressed: () {
                 context.go('/library');
               },
-              icon: const Icon(Icons.home_rounded),
+              icon: Icon(AppIcons.home),
               label: const Text("Go to Home"),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(

@@ -10,10 +10,13 @@ import 'package:distributeapp/repositories/playlist_repository.dart';
 import 'package:distributeapp/model/available_file.dart';
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:distributeapp/screens/playlist/playlist_options.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:distributeapp/core/service_locator.dart';
-import 'package:go_router/go_router.dart';
+import 'package:distributeapp/components/hoverable_icon_button.dart';
+import 'package:distributeapp/components/hoverable_area.dart';
+import 'package:distributeapp/components/hoverable_list_tile.dart';
 
 class PlaylistScreen extends StatelessWidget {
   final String playlistId;
@@ -25,14 +28,10 @@ class PlaylistScreen extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: BlurryAppBar(
-        leading: BackButton(
-          onPressed: () => context.pop(),
-          color: Theme.of(context).colorScheme.secondary,
-        ),
         actions: [
-          IconButton(
+          HoverableIconButton(
             icon: Icon(
-              Icons.edit,
+              AppIcons.edit,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             onPressed: () {
@@ -116,7 +115,7 @@ class PlaylistScreen extends StatelessWidget {
           spacing: 4,
           children: [
             Icon(
-              Icons.account_circle,
+              AppIcons.account,
               size: 16,
               color: Theme.of(context).colorScheme.secondary,
             ),
@@ -197,57 +196,61 @@ class _SongTileState extends State<_SongTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return ListTile(
-      leading: LibraryLeadingIcon(
-        albumId: widget.song.albumId,
-        isFolder: false,
-      ),
-      title: Text(
-        widget.song.title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        widget.song.artist,
-        style: theme.textTheme.bodySmall,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: BlocBuilder<DownloadCubit, DownloadState>(
-        buildWhen: (previous, current) {
-          final prevStatus = previous.queue[widget.song.fileId];
-          final currStatus = current.queue[widget.song.fileId];
-          return prevStatus != currStatus;
-        },
-        builder: (context, state) {
-          final downloadStatus =
-              state.queue[widget.song.fileId] ?? const DownloadStatus.initial();
-
-          return downloadStatus.when(
-            initial: () => widget.song.isDownloaded
-                ? Icon(Icons.check, color: theme.colorScheme.secondary)
-                : Icon(
-                    Icons.cloud_outlined,
-                    color: theme.colorScheme.secondary,
-                  ),
-            pending: () => const CircularProgressIndicator(strokeWidth: 2),
-            loading: (progress) => SizedBox(
-              height: 24,
-              width: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, value: progress),
-            ),
-            success: () =>
-                Icon(Icons.check, color: theme.colorScheme.secondary),
-            error: (message) =>
-                Icon(Icons.error, color: theme.colorScheme.error),
-          );
-        },
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-      dense: true,
-      onLongPress: () => _showOptions(context),
+    return HoverableArea(
       onTap: _onTap,
+      onLongPress: () => _showOptions(context),
+      borderRadius: BorderRadius.circular(8.0),
+      child: ListTile(
+        leading: LibraryLeadingIcon(
+          albumId: widget.song.albumId,
+          isFolder: false,
+        ),
+        title: Text(
+          widget.song.title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          widget.song.artist,
+          style: theme.textTheme.bodySmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: BlocBuilder<DownloadCubit, DownloadState>(
+          buildWhen: (previous, current) {
+            final prevStatus = previous.queue[widget.song.fileId];
+            final currStatus = current.queue[widget.song.fileId];
+            return prevStatus != currStatus;
+          },
+          builder: (context, state) {
+            final downloadStatus =
+                state.queue[widget.song.fileId] ??
+                const DownloadStatus.initial();
+
+            return downloadStatus.when(
+              initial: () => widget.song.isDownloaded
+                  ? Icon(AppIcons.check, color: theme.colorScheme.secondary)
+                  : Icon(AppIcons.cloud, color: theme.colorScheme.secondary),
+              pending: () => const CircularProgressIndicator(strokeWidth: 2),
+              loading: (progress) => SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  value: progress,
+                ),
+              ),
+              success: () =>
+                  Icon(AppIcons.check, color: theme.colorScheme.secondary),
+              error: (message) =>
+                  Icon(AppIcons.error, color: theme.colorScheme.error),
+            );
+          },
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        dense: true,
+      ),
     );
   }
 
@@ -264,12 +267,17 @@ class _SongTileState extends State<_SongTile> {
       builder: (sheetContext) {
         final isDownloaded = widget.song.isDownloaded;
         return Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: EdgeInsets.fromLTRB(
+            8.0,
+            8.0,
+            8.0,
+            8.0 + MediaQuery.of(sheetContext).padding.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline),
+              HoverableListTile(
+                leading: Icon(AppIcons.removeCircle),
                 title: const Text('Remove from Playlist'),
                 onTap: () async {
                   context.read<PlaylistBloc>().add(
@@ -285,8 +293,8 @@ class _SongTileState extends State<_SongTile> {
                 },
               ),
               if (isDownloaded)
-                ListTile(
-                  leading: const Icon(Icons.delete_outline),
+                HoverableListTile(
+                  leading: Icon(AppIcons.delete),
                   title: const Text('Remove from Downloads'),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
@@ -387,7 +395,12 @@ class _SongTileState extends State<_SongTile> {
       ),
       builder: (ctx) {
         return Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.fromLTRB(
+            16.0,
+            16.0,
+            16.0,
+            16.0 + MediaQuery.of(ctx).padding.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,12 +411,12 @@ class _SongTileState extends State<_SongTile> {
               ),
               const SizedBox(height: 16),
               ...files.map((file) {
-                return ListTile(
+                return HoverableListTile(
                   title: Text(file.format.toUpperCase()),
                   subtitle: Text(
                     "Size: ${(file.size / 1024 / 1024).toStringAsFixed(2)} MB",
                   ),
-                  trailing: const Icon(Icons.download),
+                  trailing: Icon(AppIcons.download),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _startDownload(file);

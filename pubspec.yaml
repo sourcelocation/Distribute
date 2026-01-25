@@ -63,6 +63,7 @@ dependencies:
   url_launcher: ^6.3.2
   file_picker: ^10.3.8
   disk_space_plus: ^0.2.6
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   drift_dev: ^2.0.0

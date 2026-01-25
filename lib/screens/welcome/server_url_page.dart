@@ -1,5 +1,6 @@
 import 'package:distributeapp/blocs/server_status_cubit.dart';
 import 'package:distributeapp/core/preferences/settings_cubit.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -167,7 +168,7 @@ class _ServerUrlPageState extends State<ServerUrlPage> {
         children: [
           Center(
             child: Icon(
-              Icons.dns_rounded,
+              AppIcons.dns,
               size: 64,
               color: Theme.of(context).colorScheme.primary,
             ),
@@ -202,7 +203,7 @@ class _ServerUrlPageState extends State<ServerUrlPage> {
               fillColor: Theme.of(
                 context,
               ).colorScheme.surfaceContainerHighest.withAlpha(50),
-              prefixIcon: const Icon(Icons.dns),
+              prefixIcon: Icon(AppIcons.dns),
             ),
             keyboardType: TextInputType.url,
             textInputAction: TextInputAction.done,
@@ -241,11 +242,7 @@ class _ServerUrlPageState extends State<ServerUrlPage> {
                 ),
                 error: (msg) => Row(
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 20,
-                    ),
+                    Icon(AppIcons.errorOutline, color: Colors.red, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

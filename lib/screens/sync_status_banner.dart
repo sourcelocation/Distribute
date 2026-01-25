@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:distributeapp/blocs/sync_cubit.dart';
 import 'package:distributeapp/core/sync_status.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -38,13 +39,13 @@ class _SyncStatusBannerState extends State<SyncStatusBanner> {
           idle: () {},
           syncing: () {
             message = "Syncing Library...";
-            icon = Icons.sync;
+            icon = AppIcons.sync;
             iconColor = Theme.of(context).colorScheme.primary;
             textColor = Theme.of(context).colorScheme.primary;
           },
           error: (msg) {
             message = "Sync Error: $msg";
-            icon = Icons.error_outline;
+            icon = AppIcons.errorOutline;
             iconColor = Theme.of(context).colorScheme.error;
             textColor = Theme.of(context).colorScheme.error;
             backgroundColor = Theme.of(

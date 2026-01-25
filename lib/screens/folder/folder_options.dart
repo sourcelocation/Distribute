@@ -1,8 +1,10 @@
 import 'package:distributeapp/blocs/file_system_bloc.dart';
 import 'package:distributeapp/model/playlist_folder.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:distributeapp/components/hoverable_list_tile.dart';
 
 class FolderOptionsScreen extends StatefulWidget {
   final PlaylistFolder folder;
@@ -105,23 +107,28 @@ class _FolderOptionsScreenState extends State<FolderOptionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: EdgeInsets.fromLTRB(
+        8.0,
+        8.0,
+        8.0,
+        8.0 + MediaQuery.of(context).padding.bottom,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            leading: const Icon(Icons.edit),
+          HoverableListTile(
+            leading: Icon(AppIcons.edit),
             title: const Text('Rename Folder'),
             onTap: _showRenameDialog,
           ),
-          ListTile(
-            leading: const Icon(Icons.drive_file_move),
+          HoverableListTile(
+            leading: Icon(AppIcons.moveSimple),
             title: const Text('Move to Folder'),
             onTap: _showMoveFolderDialog,
           ),
-          ListTile(
-            leading: const Icon(Icons.delete),
+          HoverableListTile(
+            leading: Icon(AppIcons.deleteSimple),
             title: const Text('Delete Folder'),
             onTap: _showDeleteDialog,
           ),

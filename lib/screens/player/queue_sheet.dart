@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:distributeapp/repositories/audio/music_player_controller.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:distributeapp/components/hoverable_area.dart';
 
 class QueueSheet extends StatelessWidget {
   const QueueSheet({super.key});
@@ -60,49 +62,59 @@ class QueueSheet extends StatelessWidget {
                         }
 
                         return ListView.builder(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).padding.bottom + 16,
+                          ),
                           controller: scrollController,
                           itemCount: queue.length,
                           itemBuilder: (context, index) {
                             final item = queue[index];
                             final isCurrent = index == state.queueIndex;
 
-                            return ListTile(
-                              leading: isCurrent
-                                  ? Icon(
-                                      Icons.equalizer,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    )
-                                  : Text(
-                                      '${index + 1}',
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                              title: Text(
-                                item.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: isCurrent
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isCurrent
-                                      ? Theme.of(context).colorScheme.primary
-                                      : null,
-                                ),
-                              ),
-                              subtitle: Text(
-                                item.artist ?? 'Unknown Artist',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            return HoverableArea(
                               onTap: () {
                                 context.read<MusicPlayerBloc>().add(
                                   MusicPlayerEvent.skipToQueueItem(index),
                                 );
                               },
+                              borderRadius: BorderRadius.circular(8.0),
+                              child: ListTile(
+                                leading: isCurrent
+                                    ? Icon(
+                                        AppIcons.equalizer,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      )
+                                    : Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                title: Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: isCurrent
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isCurrent
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  item.artist ?? 'Unknown Artist',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                // onTap: handled by HoverableArea
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                ),
+                              ),
                             );
                           },
                         );

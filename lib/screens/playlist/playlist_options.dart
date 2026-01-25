@@ -1,8 +1,10 @@
 import 'package:distributeapp/blocs/file_system_bloc.dart';
 import 'package:distributeapp/blocs/playlist_bloc.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:distributeapp/components/hoverable_list_tile.dart';
 
 class PlaylistOptionsScreen extends StatefulWidget {
   final String playlistId;
@@ -125,36 +127,41 @@ class _PlaylistOptionsScreenState extends State<PlaylistOptionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: EdgeInsets.fromLTRB(
+        8.0,
+        8.0,
+        8.0,
+        8.0 + MediaQuery.of(context).padding.bottom,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            leading: const Icon(Icons.edit),
+          HoverableListTile(
+            leading: Icon(AppIcons.edit),
             title: const Text('Rename Playlist'),
             onTap: _showRenameDialog,
           ),
-          ListTile(
-            leading: const Icon(Icons.delete),
+          HoverableListTile(
+            leading: Icon(AppIcons.deleteSimple),
             title: const Text('Delete Playlist'),
             onTap: _showDeleteDialog,
           ),
-          ListTile(
-            leading: const Icon(Icons.share),
+          HoverableListTile(
+            leading: Icon(AppIcons.share),
             title: const Text('Share Playlist'),
             onTap: null,
           ),
-          ListTile(
-            leading: const Icon(Icons.drive_file_move_outline),
+          HoverableListTile(
+            leading: Icon(AppIcons.move),
             title: const Text('Move Playlist'),
             onTap: () {
               Navigator.of(context).pop();
               context.push('/folder-picker?itemId=${widget.playlistId}');
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.download),
+          HoverableListTile(
+            leading: Icon(AppIcons.download),
             title: const Text('Download All'),
             onTap: null,
           ),

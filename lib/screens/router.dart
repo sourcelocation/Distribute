@@ -23,6 +23,7 @@ import 'package:distributeapp/core/services/navigation_service.dart';
 import 'package:distributeapp/repositories/audio/music_player_controller.dart';
 import 'package:distributeapp/core/ui/dimensions.dart';
 import 'package:distributeapp/components/blurry_app_bar.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 
 import 'package:distributeapp/screens/welcome/onboarding_scaffold.dart';
 import 'package:distributeapp/screens/welcome/welcome_page.dart';
@@ -462,10 +463,10 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
   }
 
   final appScreens = const [LibraryScreen(), SearchScreen(), SettingsScreen()];
-  final navigationDestinations = const [
-    NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
-    NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
-    NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+  final navigationDestinations = [
+    NavigationDestination(icon: Icon(AppIcons.libraryMusic), label: 'Library'),
+    NavigationDestination(icon: Icon(AppIcons.search), label: 'Search'),
+    NavigationDestination(icon: Icon(AppIcons.settings), label: 'Settings'),
   ];
 
   @override
@@ -553,9 +554,6 @@ class _ScaffoldWithNavBarState extends State<ScaffoldWithNavBar> {
                     selectedIndex: widget.navigationShell.currentIndex,
                     onDestinationSelected: (int index) =>
                         _onTap(context, index),
-                    indicatorColor: Theme.of(
-                      context,
-                    ).colorScheme.secondary.withAlpha(55),
                   ),
                 ),
               ),

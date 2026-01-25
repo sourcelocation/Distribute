@@ -1,3 +1,4 @@
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 
 class ErrorMessage extends StatelessWidget {
@@ -11,7 +12,7 @@ class ErrorMessage extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
+        Icon(AppIcons.errorOutline, color: Colors.redAccent, size: 40),
         const SizedBox(height: 10),
         Text(message, style: const TextStyle(color: Colors.grey)),
       ],

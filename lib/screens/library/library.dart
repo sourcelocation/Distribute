@@ -5,14 +5,15 @@ import 'package:distributeapp/model/playlist_folder.dart';
 import 'package:distributeapp/screens/library/library_row.dart';
 import 'package:distributeapp/screens/playlist/playlist_options.dart';
 import 'package:distributeapp/screens/folder/folder_options.dart';
-
 import 'package:distributeapp/core/service_locator.dart';
 import 'package:distributeapp/core/sync_manager.dart';
-
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:distributeapp/components/hoverable_icon_button.dart';
+import 'package:distributeapp/components/hoverable_list_tile.dart';
 
 class LibraryScreen extends StatelessWidget {
   final String? folderId;
@@ -50,7 +51,7 @@ class LibraryScreen extends StatelessWidget {
           loaded: (s) => s.isRoot,
           orElse: () => false,
         );
-        final showBackButton = !isRoot && folderId != null;
+        final showBackButton = !isRoot && folderId != null || isPickerMode;
 
         return Scaffold(
           extendBodyBehindAppBar: true,
@@ -63,17 +64,12 @@ class LibraryScreen extends StatelessWidget {
               isRoot,
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.add),
+              HoverableIconButton(
+                icon: Icon(AppIcons.add),
                 onPressed: () => _showCreateOptions(context),
               ),
             ],
-            leading: showBackButton
-                ? BackButton(
-                    onPressed: () => context.pop(),
-                    color: Theme.of(context).colorScheme.secondary,
-                  )
-                : null,
+            automaticallyImplyLeading: showBackButton,
           ),
           body: state.maybeWhen(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -98,7 +94,7 @@ class LibraryScreen extends StatelessWidget {
                     onFolderSelected!(context, folderId);
                   },
                   label: const Text("Move Here"),
-                  icon: const Icon(Icons.check),
+                  icon: Icon(AppIcons.check),
                 )
               : null,
         );
@@ -151,7 +147,7 @@ class LibraryScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.folder_open_rounded,
+                  AppIcons.folderOpen,
                   size: 48,
                   color: scheme.secondary.withAlpha(100),
                 ),
@@ -341,7 +337,10 @@ class _PlaylistAndFolderCreationScreenState
           left: 16.0,
           right: 16.0,
           top: 16.0,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16.0,
+          bottom:
+              MediaQuery.of(context).viewInsets.bottom +
+              16.0 +
+              MediaQuery.of(context).padding.bottom,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -380,13 +379,18 @@ class _PlaylistAndFolderCreationScreenState
     }
 
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: EdgeInsets.fromLTRB(
+        8.0,
+        8.0,
+        8.0,
+        8.0 + MediaQuery.of(context).padding.bottom,
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            leading: const Icon(Icons.music_note),
+          HoverableListTile(
+            leading: Icon(AppIcons.musicNote),
             title: const Text('New Playlist'),
             onTap: () {
               setState(() {
@@ -396,8 +400,8 @@ class _PlaylistAndFolderCreationScreenState
               nameController.clear();
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.folder),
+          HoverableListTile(
+            leading: Icon(AppIcons.folder),
             title: const Text('New Folder'),
             onTap: () {
               setState(() {

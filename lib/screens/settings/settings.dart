@@ -11,8 +11,11 @@ import 'package:distributeapp/main.dart';
 import 'package:distributeapp/screens/settings/settings_profile_header.dart';
 
 import 'package:distributeapp/components/blurry_app_bar.dart';
+import 'package:distributeapp/components/settings_icon.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:distributeapp/components/hoverable_list_tile.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -25,6 +28,7 @@ class SettingsScreen extends StatelessWidget {
       extendBodyBehindAppBar: true,
       appBar: BlurryAppBar(
         center: Text("Settings", style: theme.textTheme.titleMedium),
+        automaticallyImplyLeading: false,
       ),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
@@ -67,8 +71,8 @@ class _UserSection extends StatelessWidget {
             );
 
             if (loggedInUser != null) {
-              return ListTile(
-                leading: const Icon(Icons.logout),
+              return HoverableListTile(
+                leading: SettingsIcon(AppIcons.logout),
                 title: const Text(
                   "Log out",
                   style: TextStyle(fontWeight: FontWeight.w600),
@@ -82,8 +86,8 @@ class _UserSection extends StatelessWidget {
 
             return Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.login),
+                HoverableListTile(
+                  leading: SettingsIcon(AppIcons.login),
                   title: Row(
                     children: [
                       const Text(
@@ -101,8 +105,8 @@ class _UserSection extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/settings/login'),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.person_add_outlined),
+                HoverableListTile(
+                  leading: SettingsIcon(AppIcons.personAdd),
                   title: const Text(
                     "Sign up",
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -127,21 +131,21 @@ class _DataSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ListTile(
+        HoverableListTile(
           title: const Text(
             'Storage',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          leading: const Icon(Icons.folder_outlined),
+          leading: SettingsIcon(AppIcons.folder),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/settings/storage'),
         ),
-        ListTile(
+        HoverableListTile(
           title: const Text(
             'Requests',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          leading: const Icon(Icons.mail_outline),
+          leading: SettingsIcon(AppIcons.requests),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/settings/requests'),
         ),
@@ -161,8 +165,8 @@ class _ServerSection extends StatelessWidget {
         final serverUrl = settingsState.serverURL;
         return Column(
           children: [
-            ListTile(
-              leading: const Icon(Icons.dns),
+            HoverableListTile(
+              leading: SettingsIcon(AppIcons.dns),
               title: Row(
                 children: [
                   const Text(
@@ -195,8 +199,8 @@ class _ServerSection extends StatelessWidget {
                   orElse: () => false,
                 );
 
-                return ListTile(
-                  leading: const Icon(Icons.info_outline),
+                return HoverableListTile(
+                  leading: SettingsIcon(AppIcons.info),
                   title: Row(
                     children: [
                       const Text(
@@ -304,8 +308,8 @@ class _DebugSection extends StatelessWidget {
         return Column(
           children: [
             if (state.debugMode) ...[
-              ListTile(
-                leading: const Icon(Icons.webhook),
+              HoverableListTile(
+                leading: SettingsIcon(AppIcons.webhook),
                 title: const Text('Enable Discord RPC'),
                 trailing: Switch.adaptive(
                   value: state.discordRPCEnabled,
@@ -314,8 +318,8 @@ class _DebugSection extends StatelessWidget {
                   },
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.volume_off),
+              HoverableListTile(
+                leading: SettingsIcon(AppIcons.volumeOff),
                 title: const Text("Don't play sound"),
                 trailing: Switch.adaptive(
                   value: state.dummySoundEnabled,
@@ -324,18 +328,21 @@ class _DebugSection extends StatelessWidget {
                   },
                 ),
               ),
-              ListTile(
-                leading: const Icon(Icons.delete_forever, color: Colors.red),
+              HoverableListTile(
+                leading: SettingsIcon(
+                  AppIcons.deleteForever,
+                  color: Colors.red,
+                ),
                 title: const Text(
                   'Wipe local database',
                   style: TextStyle(color: Colors.red),
                 ),
-                trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                trailing: Icon(AppIcons.chevronRight, color: Colors.red),
                 onTap: () => _showWipeDatabaseDialog(context),
               ),
             ],
-            ListTile(
-              leading: const Icon(Icons.bug_report),
+            HoverableListTile(
+              leading: SettingsIcon(AppIcons.bugReport),
               title: const Text('Debug mode'),
               trailing: Switch.adaptive(
                 value: state.debugMode,
@@ -388,8 +395,8 @@ class _AboutSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ListTile(
-          leading: const Icon(Icons.gavel),
+        HoverableListTile(
+          leading: SettingsIcon(AppIcons.legal),
           title: const Text(
             'Show legal',
             style: TextStyle(fontWeight: FontWeight.w600),
@@ -397,8 +404,8 @@ class _AboutSection extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/settings/eula'),
         ),
-        ListTile(
-          leading: const Icon(Icons.info),
+        HoverableListTile(
+          leading: SettingsIcon(AppIcons.about),
           title: const Text(
             'About',
             style: TextStyle(fontWeight: FontWeight.w600),
@@ -414,7 +421,7 @@ class _AboutSection extends StatelessWidget {
             );
           },
         ),
-        ListTile(
+        HoverableListTile(
           title: Text(
             "Distribute (App)\nv$version",
             style: Theme.of(context).textTheme.bodySmall,

@@ -1,5 +1,7 @@
 import 'package:distributeapp/screens/library/album_image.dart';
+import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:distributeapp/components/hoverable_area.dart';
 
 class LibraryRowWidget extends StatelessWidget {
   final String title;
@@ -19,19 +21,23 @@ class LibraryRowWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: LibraryLeadingIcon(albumId: albumId, isFolder: isFolder),
-      trailing: const Icon(Icons.chevron_right),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      dense: true,
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+    return HoverableArea(
       onTap: onTap,
       onLongPress: onLongPress,
+      borderRadius: BorderRadius.circular(8.0),
+      child: ListTile(
+        leading: LibraryLeadingIcon(albumId: albumId, isFolder: isFolder),
+        trailing: Icon(AppIcons.chevronRight, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        dense: true,
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        // onTap handled by HoverableArea
+      ),
     );
   }
 }

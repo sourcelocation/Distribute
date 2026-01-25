@@ -72,7 +72,7 @@ CardThemeData createCardTheme(ColorScheme colorScheme) {
     color: colorScheme.surfaceContainer,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
-      side: BorderSide(color: colorScheme.outline, width: 1),
+      // side: BorderSide(color: colorScheme.outline, width: 1),
     ),
     margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
   );
@@ -166,7 +166,10 @@ ThemeData createDarkTheme() {
   final colorScheme = createColorScheme(Brightness.dark);
 
   return ThemeData(
+    splashFactory: NoSplash.splashFactory,
     splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
+    hoverColor: Colors.transparent,
     brightness: Brightness.dark,
     colorScheme: colorScheme,
     textTheme: createTextTheme(),
@@ -180,6 +183,36 @@ ThemeData createDarkTheme() {
     floatingActionButtonTheme: createFabTheme(colorScheme),
     snackBarTheme: createSnackBarTheme(),
     dividerColor: const Color.fromARGB(255, 50, 50, 50),
+    navigationBarTheme: createNavigationBarTheme(colorScheme),
+  );
+}
+
+NavigationBarThemeData createNavigationBarTheme(ColorScheme colorScheme) {
+  return NavigationBarThemeData(
+    backgroundColor: colorScheme.surface,
+    indicatorColor: Colors.transparent,
+    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+    overlayColor: WidgetStateProperty.all(Colors.transparent),
+    iconTheme: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.selected)) {
+        return const IconThemeData(color: Colors.white);
+      }
+      return IconThemeData(color: Colors.grey);
+    }),
+    labelTextStyle: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.selected)) {
+        return const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        );
+      }
+      return const TextStyle(
+        color: Colors.grey,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      );
+    }),
   );
 }
 
@@ -187,7 +220,10 @@ ThemeData createLightTheme() {
   final colorScheme = createColorScheme(Brightness.light);
 
   return ThemeData(
+    splashFactory: NoSplash.splashFactory,
     splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
+    hoverColor: Colors.transparent,
     brightness: Brightness.light,
     colorScheme: colorScheme,
     textTheme: createTextTheme(),
@@ -201,5 +237,6 @@ ThemeData createLightTheme() {
     floatingActionButtonTheme: createFabTheme(colorScheme),
     snackBarTheme: createSnackBarTheme(),
     dividerColor: const Color.fromARGB(255, 50, 50, 50),
+    navigationBarTheme: createNavigationBarTheme(colorScheme),
   );
 }

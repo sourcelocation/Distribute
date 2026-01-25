@@ -64,5 +64,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to pick files.</string>
 </dict>
 </plist>
