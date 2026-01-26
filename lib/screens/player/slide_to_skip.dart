@@ -32,10 +32,11 @@ class SlideToSkipMiniPlayer extends StatefulWidget {
 
 class _SlideToSkipMiniPlayerState extends State<SlideToSkipMiniPlayer> {
   late PageController _pageController;
-
   late Widget _current;
   Widget? _next;
   Widget? _previous;
+
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -47,21 +48,23 @@ class _SlideToSkipMiniPlayerState extends State<SlideToSkipMiniPlayer> {
   }
 
   @override
+  @override
   void didUpdateWidget(SlideToSkipMiniPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (widget.currentSongId != oldWidget.currentSongId) {
       setState(() {
         _current = widget.current;
         _next = widget.next;
         _previous = widget.previous;
+        _isNavigating = false;
       });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_pageController.hasClients) {
-          _pageController.jumpToPage(1);
-        }
-      });
+      if (_pageController.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _pageController.hasClients) {
+            _pageController.jumpToPage(1);
+          }
+        });
+      }
     } else {
       if (widget.next != oldWidget.next ||
           widget.previous != oldWidget.previous ||
@@ -111,28 +114,46 @@ class _SlideToSkipMiniPlayerState extends State<SlideToSkipMiniPlayer> {
             PointerDeviceKind.trackpad,
           },
         ),
-        child: NotificationListener<ScrollUpdateNotification>(
+        child: NotificationListener<ScrollNotification>(
           onNotification: (notification) {
-            if (notification.dragDetails != null &&
-                _pageController.hasClients) {
-              final double velocity = notification.dragDetails!.delta.dx;
-              final double page = _pageController.page ?? 1.0;
-
-              const double flingThreshold = 10.0;
-
-              int targetPage;
-              if (velocity < -flingThreshold) {
-                targetPage = page.ceil();
-              } else if (velocity > flingThreshold) {
-                targetPage = page.floor();
-              } else {
-                targetPage = page.round();
+            if (notification is ScrollEndNotification) {
+              if (_pageController.hasClients) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _pageController.hasClients) {
+                    _pageController.jumpToPage(1);
+                  }
+                });
               }
+              _isNavigating = false;
+              return false;
+            }
+            if (notification is ScrollUpdateNotification) {
+              if (_isNavigating) return false;
+              if (notification.dragDetails != null &&
+                  _pageController.hasClients) {
+                final double instantDelta = notification.dragDetails!.delta.dx;
+                final double page = _pageController.page ?? 1.0;
 
-              if (targetPage >= 2) {
-                widget.onSkip();
-              } else if (targetPage <= 0) {
-                widget.onPrevious?.call();
+                const double sensitivity = 15.0;
+
+                int targetPage;
+                if (instantDelta < -sensitivity) {
+                  targetPage = page.ceil();
+                } else if (instantDelta > sensitivity) {
+                  targetPage = page.floor();
+                } else {
+                  targetPage = page.round();
+                }
+
+                if (targetPage >= 2) {
+                  _isNavigating = true;
+                  widget.onSkip();
+                } else if (targetPage <= 0) {
+                  if (widget.onPrevious != null) {
+                    _isNavigating = true;
+                    widget.onPrevious!();
+                  }
+                }
               }
             }
             return false;
