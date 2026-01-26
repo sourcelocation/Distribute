@@ -224,7 +224,16 @@ class _PlaybackJob {
 
   Future<void> play() async {
     if (_isCancelled || !isLoaded || _source == null) return;
-    _handle = await SoLoud.instance.play(_source!);
+    try {
+      _handle = await SoLoud.instance.play(_source!);
+    } catch (e) {
+      debugPrint(
+        "AudioBackend: Failed to play AudioSource. It might be invalid: $e",
+      );
+      isLoaded = false;
+      _source = null;
+      rethrow;
+    }
   }
 
   Future<void> stop() async {

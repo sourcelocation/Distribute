@@ -4,8 +4,13 @@ import 'dart:ui';
 import 'package:distributeapp/blocs/music/position_cubit.dart';
 import 'package:distributeapp/screens/player/player_fullscreen_content.dart';
 import 'package:distributeapp/screens/player/player_mini_content.dart';
+import 'package:distributeapp/screens/player/slide_to_skip.dart';
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:distributeapp/repositories/audio/music_player_controller.dart';
+import 'package:distributeapp/repositories/audio/queue_manager.dart';
+import 'package:distributeapp/core/artwork/artwork_repository.dart';
+import 'package:distributeapp/model/song.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -81,6 +86,172 @@ class _MusicPlayerState extends State<MusicPlayer>
     }
   }
 
+  Widget _buildArtwork(BuildContext context, ArtworkData artworkData) {
+    final image = artworkData.imageFileHq != null
+        ? Image.file(
+            artworkData.imageFileHq!,
+            key: ValueKey(artworkData.imageFileHq!.path),
+            cacheWidth: 400,
+            fit: BoxFit.cover,
+            height: double.infinity,
+            width: double.infinity,
+          )
+        : Image.asset(
+            'assets/default-playlist-hq.png',
+            key: const ValueKey('default-asset'),
+            fit: BoxFit.cover,
+            height: double.infinity,
+            width: double.infinity,
+          );
+
+    return Container(
+      key: ValueKey(artworkData.imageFileHq?.path),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: artworkData.backgroundColor,
+        borderRadius: BorderRadius.circular(0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((255.0 * 0.2).toInt()),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            foregroundDecoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.center,
+                colors: [
+                  const Color.fromARGB(80, 0, 0, 0),
+                  const Color.fromARGB(20, 0, 0, 0),
+                ],
+              ),
+            ),
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(
+                sigmaX: 5,
+                sigmaY: 5,
+                tileMode: TileMode.clamp,
+              ),
+              child: OverflowBox(
+                minWidth: 0,
+                minHeight: 0,
+                maxWidth: MediaQuery.of(context).size.width,
+                maxHeight: MediaQuery.of(context).size.width,
+                child: image,
+              ),
+            ),
+          ),
+          Container(color: Colors.black.withAlpha((255 * 0.2).toInt())),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniContent(
+    BuildContext context,
+    MediaItem item,
+    ArtworkData artworkData,
+    bool isPlaying,
+  ) {
+    final song = Song(
+      id: item.id,
+      title: item.title,
+      artists: [item.artist ?? 'Unknown'],
+      albumTitle: item.album ?? '',
+      albumId: '',
+      fileId: null,
+      format: null,
+      isDownloaded: false,
+    );
+
+    final borderColor = Color.lerp(
+      artworkData.backgroundColor.withAlpha(128),
+      artworkData.effectColor,
+      0.5,
+    )!;
+
+    return MiniPlayerContent(
+      currentSong: song,
+      isPlaying: isPlaying,
+      onPlayPressed: () => context.read<MusicPlayerBloc>().add(
+        MusicPlayerEvent.togglePlayPause(),
+      ),
+      borderColor: borderColor.withAlpha(50),
+    );
+  }
+
+  Widget? _buildSlideContent(
+    BuildContext context,
+    MediaItem? item,
+    ArtworkData? artworkData, {
+    bool isCurrent = false,
+  }) {
+    if (item == null || artworkData == null) return null;
+
+    return Stack(
+      children: [
+        _buildMiniContent(
+          context,
+          item,
+          artworkData,
+          isCurrent ? context.read<MusicPlayerBloc>().state.isPlaying : false,
+        ),
+        if (isCurrent)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: BlocBuilder<PositionCubit, Duration>(
+              builder: (context, currentPosition) {
+                final state = context.read<MusicPlayerBloc>().state;
+                final durationMs = state.duration.inMilliseconds;
+                final progress = durationMs > 0
+                    ? currentPosition.inMilliseconds / durationMs
+                    : 0.0;
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: progress.clamp(0.0, 1.0),
+                    child: Container(height: 3, color: Colors.white),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  MediaItem? _getNeighborMediaItem(
+    ControllerState state, {
+    required bool isNext,
+  }) {
+    if (state.queue.isEmpty) return null;
+    final artworkData = isNext
+        ? state.nextArtworkData
+        : state.previousArtworkData;
+    if (artworkData == null) return null;
+
+    final currentIndex = state.queueIndex;
+    final maxIndex = state.queue.length - 1;
+
+    if (isNext) {
+      if (currentIndex < maxIndex) return state.queue[currentIndex + 1];
+      if (state.loopMode == LoopMode.all) return state.queue[0];
+    } else {
+      if (currentIndex > 0) return state.queue[currentIndex - 1];
+      if (state.loopMode == LoopMode.all) return state.queue[maxIndex];
+    }
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -112,20 +283,6 @@ class _MusicPlayerState extends State<MusicPlayer>
         if (currentSong == null && _enterController.isDismissed) {
           return const SizedBox.shrink();
         }
-
-        final borderColor = Color.lerp(
-          artworkData.backgroundColor.withAlpha(128),
-          artworkData.effectColor,
-          0.5,
-        )!;
-        final Widget miniPlayer = MiniPlayerContent(
-          currentSong: currentSong,
-          isPlaying: isPlaying,
-          onPlayPressed: () => context.read<MusicPlayerBloc>().add(
-            MusicPlayerEvent.togglePlayPause(),
-          ),
-          borderColor: borderColor.withAlpha(50),
-        );
 
         final Widget fullPlayer = FullPlayerContent(
           currentSong: currentSong,
@@ -178,6 +335,7 @@ class _MusicPlayerState extends State<MusicPlayer>
                     ? Image.file(
                         artworkData.imageFileHq!,
                         key: ValueKey(artworkData.imageFileHq!.path),
+                        cacheWidth: 800,
                         fit: BoxFit.cover,
                         height: double.infinity,
                         width: double.infinity,
@@ -192,82 +350,34 @@ class _MusicPlayerState extends State<MusicPlayer>
               ),
             );
 
-            final Widget staticMiniBackground = RepaintBoundary(
-              child: Container(
-                foregroundDecoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.center,
-                    colors: [
-                      const Color.fromARGB(80, 0, 0, 0),
-                      const Color.fromARGB(20, 0, 0, 0),
-                    ],
-                  ),
+            final Widget staticFullBackground = Container(
+              foregroundDecoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Color.lerp(artworkData.backgroundColor, Colors.black, 0.2)!,
+                    Colors.transparent,
+                  ],
                 ),
-                child: ImageFiltered(
-                  imageFilter: ImageFilter.blur(
-                    sigmaX: 5,
-                    sigmaY: 5,
-                    tileMode: TileMode.clamp,
-                  ),
-                  child: rawImage,
+              ),
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: 7,
+                  sigmaY: 7,
+                  tileMode: TileMode.clamp,
                 ),
+                child: rawImage,
               ),
             );
 
-            final Widget staticFullBackground = RepaintBoundary(
-              child: Container(
-                foregroundDecoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Color.lerp(
-                        artworkData.backgroundColor,
-                        Colors.black,
-                        0.2,
-                      )!,
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                child: ImageFiltered(
-                  imageFilter: ImageFilter.blur(
-                    sigmaX: 7,
-                    sigmaY: 7,
-                    tileMode: TileMode.clamp,
-                  ),
-                  child: Transform.scale(scale: 1.0, child: rawImage),
-                ),
-              ),
-            );
-
-            var fadeTransition = FadeTransition(
-              opacity: _fadeAnimation,
-              child: GestureDetector(
-                onTap: _onExpandTap,
-                onVerticalDragUpdate: (details) {
-                  final double delta =
-                      details.primaryDelta! / (maxPlayerHeight - _miniHeight);
-                  _expandController.value -= delta;
-                },
-                onVerticalDragEnd: (details) {
-                  const double velocityThreshold = 300.0;
-                  final double velocity = details.primaryVelocity!;
-
-                  if (velocity < -velocityThreshold) {
-                    _expandController.forward();
-                  } else if (velocity > velocityThreshold) {
-                    _expandController.reverse();
-                  } else if (_expandController.value > 0.5) {
-                    _expandController.forward();
-                  } else {
-                    _expandController.reverse();
-                  }
-                },
-                behavior: t > 0
-                    ? HitTestBehavior.opaque
-                    : HitTestBehavior.deferToChild,
+            return Positioned(
+              height: currentHeight,
+              width: currentWidth,
+              left: currentMargin.left,
+              bottom: currentMargin.bottom - enterOffset,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
                 child: Container(
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
@@ -284,50 +394,70 @@ class _MusicPlayerState extends State<MusicPlayer>
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      staticMiniBackground,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 350),
+                        child: _buildArtwork(context, artworkData),
+                      ),
+                      SlideToSkipMiniPlayer(
+                        currentSongId: state.mediaItem?.id,
+                        onTap: _onExpandTap,
+                        onVerticalDragUpdate: (details) {
+                          final double delta =
+                              details.primaryDelta! /
+                              (maxPlayerHeight - _miniHeight);
+                          _expandController.value -= delta;
+                        },
+                        onVerticalDragEnd: (details) {
+                          const double velocityThreshold = 300.0;
+                          final double velocity = details.primaryVelocity!;
+
+                          if (velocity < -velocityThreshold) {
+                            _expandController.forward();
+                          } else if (velocity > velocityThreshold) {
+                            _expandController.reverse();
+                          } else if (_expandController.value > 0.5) {
+                            _expandController.forward();
+                          } else {
+                            _expandController.reverse();
+                          }
+                        },
+                        onSkip: () {
+                          context.read<MusicPlayerBloc>().add(
+                            const MusicPlayerEvent.skipToNext(),
+                          );
+                        },
+                        onPrevious: () {
+                          context.read<MusicPlayerBloc>().add(
+                            const MusicPlayerEvent.skipToPrevious(),
+                          );
+                        },
+                        current: _buildSlideContent(
+                          context,
+                          state.mediaItem,
+                          artworkData,
+                          isCurrent: true,
+                        )!,
+                        next: _buildSlideContent(
+                          context,
+                          _getNeighborMediaItem(state, isNext: true),
+                          state.nextArtworkData,
+                        ),
+                        previous: _buildSlideContent(
+                          context,
+                          _getNeighborMediaItem(state, isNext: false),
+                          state.previousArtworkData,
+                        ),
+                      ),
                       if (t > 0)
                         Opacity(
                           opacity: t.clamp(0.0, 1.0),
                           child: staticFullBackground,
                         ),
-                      Container(
-                        color: Colors.black.withAlpha((255 * 0.2 * t).toInt()),
-                      ),
-                      if (t < 1.0)
-                        Opacity(
-                          key: const ValueKey('mini_player'),
-                          opacity: (1.0 - t).clamp(0.0, 1.0),
-                          child: Transform.translate(
-                            offset: Offset(0, t * -50),
-                            child: miniPlayer,
+                      if (t > 0)
+                        Container(
+                          color: Colors.black.withAlpha(
+                            (255 * 0.2 * t).toInt(),
                           ),
-                        ),
-                      if (t < 1.0)
-                        BlocBuilder<PositionCubit, Duration>(
-                          builder: (context, currentPosition) {
-                            final durationMs = state.duration.inMilliseconds;
-                            final progress = durationMs > 0
-                                ? currentPosition.inMilliseconds / durationMs
-                                : 0.0;
-                            return Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: FractionallySizedBox(
-                                  widthFactor: progress.clamp(0.0, 1.0),
-                                  child: Container(
-                                    height: 3,
-                                    color: Colors.white.withAlpha(
-                                      ((1.0 - t * 7.0).clamp(0.0, 1.0) * 255)
-                                          .toInt(),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
                         ),
                       Visibility(
                         visible: t > 0.0,
@@ -356,13 +486,6 @@ class _MusicPlayerState extends State<MusicPlayer>
                   ),
                 ),
               ),
-            );
-            return Positioned(
-              height: currentHeight,
-              width: currentWidth,
-              left: currentMargin.left,
-              bottom: currentMargin.bottom - enterOffset,
-              child: fadeTransition,
             );
           },
         );

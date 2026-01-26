@@ -30,6 +30,8 @@ sealed class ControllerState with _$ControllerState {
     required bool isShuffled,
     required LoopMode loopMode,
     required ArtworkData artworkData,
+    required ArtworkData? nextArtworkData,
+    required ArtworkData? previousArtworkData,
     required AudioProcessingState processingState,
   }) = _ControllerState;
 
@@ -43,6 +45,8 @@ sealed class ControllerState with _$ControllerState {
     isShuffled: false,
     loopMode: LoopMode.all,
     artworkData: ArtworkData.empty,
+    nextArtworkData: null,
+    previousArtworkData: null,
     processingState: AudioProcessingState.idle,
   );
 
@@ -257,8 +261,6 @@ class MusicPlayerController {
           // Just update metadata.
           _loadArtworkForSong(newSong);
 
-          _loadArtworkForSong(newSong);
-
           final localPath = newSong.localPath(rootPath);
           final mediaItem = await _createMediaItem(
             newSong,
@@ -306,9 +308,9 @@ class MusicPlayerController {
       ),
     );
 
-    // Check if we need to update preload (e.g. Shuffle changed next song)
+    // Preload neighbors after queue state settles
     if (_state.isPlaying) {
-      _preloadNextSong();
+      _preloadNeighbors();
     }
   }
 
@@ -383,18 +385,6 @@ class MusicPlayerController {
     } catch (e) {
       _emitState(_state.copyWith(processingState: AudioProcessingState.error));
     }
-
-    _preloadNextSong();
-  }
-
-  Future<void> _preloadNextSong() async {
-    final nextIndex = _queueManager.getNextIndex();
-    if (nextIndex != null) {
-      final nextSong = _queueManager.state.queue[nextIndex];
-      if (await isSongAvailable(nextSong)) {
-        await _audioBackend.preload(nextSong.localPath(rootPath));
-      }
-    }
   }
 
   Future<void> _loadArtworkForSong(Song? song) async {
@@ -414,6 +404,54 @@ class MusicPlayerController {
     }
   }
 
+  Future<void> _preloadNeighbors() async {
+    await Future.wait([
+      _preloadNeighborItem(isNext: true),
+      _preloadNeighborItem(isNext: false),
+    ]);
+  }
+
+  Future<void> _preloadNeighborItem({required bool isNext}) async {
+    final index = isNext
+        ? _queueManager.getNextIndex()
+        : _queueManager.getPreviousIndex();
+
+    if (index != null) {
+      final song = _queueManager.state.queue[index];
+
+      if (await isSongAvailable(song)) {
+        await _audioBackend.preload(song.localPath(rootPath));
+      }
+
+      try {
+        final artwork = await artworkRepository.getArtworkData(
+          song.albumId,
+          ArtQuality.hq,
+        );
+
+        final currentIndex = isNext
+            ? _queueManager.getNextIndex()
+            : _queueManager.getPreviousIndex();
+
+        if (currentIndex == index) {
+          if (isNext) {
+            _emitState(_state.copyWith(nextArtworkData: artwork));
+          } else {
+            _emitState(_state.copyWith(previousArtworkData: artwork));
+          }
+        }
+      } catch (e) {
+        // Ignore artwork errors
+      }
+    } else {
+      if (isNext) {
+        _emitState(_state.copyWith(nextArtworkData: null));
+      } else {
+        _emitState(_state.copyWith(previousArtworkData: null));
+      }
+    }
+  }
+
   Future<MediaItem> _createMediaItem(
     Song song, {
     String? localPath,
@@ -427,16 +465,23 @@ class MusicPlayerController {
     Duration duration = Duration.zero;
 
     if (loadArtwork) {
-      try {
-        final artworkFile = await artworkRepository.getArtworkFile(
-          song.albumId,
-          ArtQuality.hq,
-        );
-        artUri = Uri.file(artworkFile.path);
-      } catch (e) {
-        artUri = await _getArtUriFromAsset(
-          'assets/menu/default-playlist-hq.png',
-        );
+      // Reuse from current state if same album, else fetch
+      final cached = _state.artworkData;
+      if (cached.artUri != null &&
+          _state.currentSong?.albumId == song.albumId) {
+        artUri = cached.artUri;
+      } else {
+        try {
+          final artworkData = await artworkRepository.getArtworkData(
+            song.albumId,
+            ArtQuality.hq,
+          );
+          artUri = artworkData.artUri;
+        } catch (e) {
+          artUri = await _getArtUriFromAsset(
+            'assets/menu/default-playlist-hq.png',
+          );
+        }
       }
       duration = Duration(
         milliseconds: (await song.getDuration(rootPath))?.inMilliseconds ?? 0,

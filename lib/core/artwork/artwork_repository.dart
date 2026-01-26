@@ -10,6 +10,7 @@ import 'package:palette_generator/palette_generator.dart';
 class ArtworkData {
   final File? imageFileHq;
   final File? imageFileLq;
+  final Uri? artUri;
   final Color primaryColor;
   final Color backgroundColor;
   final Color effectColor;
@@ -17,6 +18,7 @@ class ArtworkData {
   ArtworkData({
     required this.imageFileHq,
     required this.imageFileLq,
+    required this.artUri,
     required this.primaryColor,
     required this.backgroundColor,
     required this.effectColor,
@@ -29,6 +31,7 @@ class ArtworkData {
   static final ArtworkData empty = ArtworkData(
     imageFileHq: null,
     imageFileLq: null,
+    artUri: null,
     primaryColor: Colors.grey,
     backgroundColor: Colors.grey,
     effectColor: Colors.white,
@@ -93,12 +96,11 @@ class ArtworkRepository {
   Future<ArtworkData> getArtworkData(String albumId, ArtQuality quality) async {
     final cached = _memoryCache[albumId];
     if (cached != null) {
-      if (quality == ArtQuality.hq && cached.imageFileHq != null) {
-        return cached;
-      }
-      if (quality == ArtQuality.lq && cached.imageFileLq != null) {
-        return cached;
-      }
+      // Return cached if it already has the requested quality
+      final hasQuality = quality == ArtQuality.hq
+          ? cached.imageFileHq != null
+          : cached.imageFileLq != null;
+      if (hasQuality) return cached;
     }
 
     try {
@@ -108,6 +110,7 @@ class ArtworkRepository {
         final newData = ArtworkData(
           imageFileHq: quality == ArtQuality.hq ? file : cached.imageFileHq,
           imageFileLq: quality == ArtQuality.lq ? file : cached.imageFileLq,
+          artUri: Uri.file(file.path),
           primaryColor: cached.primaryColor,
           backgroundColor: cached.backgroundColor,
           effectColor: cached.effectColor,
@@ -129,6 +132,7 @@ class ArtworkRepository {
       final data = ArtworkData(
         imageFileHq: quality == ArtQuality.hq ? file : null,
         imageFileLq: quality == ArtQuality.lq ? file : null,
+        artUri: Uri.file(file.path),
         primaryColor: primaryColor,
         backgroundColor: backgroundColor,
         effectColor: effectColor,
