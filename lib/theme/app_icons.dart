@@ -20,10 +20,10 @@ class AppIcons {
   static IconData get folderOpen =>
       isCupertino ? CupertinoIcons.folder_open : Icons.folder_open;
   static IconData get requests =>
-      isCupertino ? CupertinoIcons.mail : Icons.mail_outline; // request/mail
+      isCupertino ? CupertinoIcons.mail : Icons.mail_outline;
   static IconData get dns => isCupertino ? CupertinoIcons.globe : Icons.dns;
   static IconData get info =>
-      isCupertino ? CupertinoIcons.info : Icons.info_outline; // or info
+      isCupertino ? CupertinoIcons.info : Icons.info_outline;
   static IconData get about =>
       isCupertino ? CupertinoIcons.info_circle : Icons.info;
   static IconData get webhook =>
@@ -54,18 +54,17 @@ class AppIcons {
 
   static IconData get removeCircle =>
       isCupertino ? CupertinoIcons.minus_circle : Icons.remove_circle_outline;
-  static IconData get delete => isCupertino
-      ? CupertinoIcons.delete
-      : Icons.delete_outline; // delete_outline
+  static IconData get delete =>
+      isCupertino ? CupertinoIcons.delete : Icons.delete_outline;
   static IconData get deleteSimple =>
-      isCupertino ? CupertinoIcons.delete : Icons.delete; // delete
+      isCupertino ? CupertinoIcons.delete : Icons.delete;
 
   static IconData get download =>
       isCupertino ? CupertinoIcons.cloud_download : Icons.download;
   static IconData get share => isCupertino ? CupertinoIcons.share : Icons.share;
   static IconData get move => isCupertino
       ? CupertinoIcons.folder_badge_plus
-      : Icons.drive_file_move_outline; // approximation
+      : Icons.drive_file_move_outline;
   static IconData get moveSimple =>
       isCupertino ? CupertinoIcons.folder_badge_plus : Icons.drive_file_move;
 
