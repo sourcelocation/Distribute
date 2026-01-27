@@ -258,11 +258,14 @@ jobs:
         
         chmod +x linuxdeploy*.AppImage
         
-        cp assets/icon/icon-rounded-512.png distribute.png
+        mkdir -p AppDir/usr/bin
+        cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
         
+        cp assets/icon/icon-rounded-512.png distribute.png
+
         ./linuxdeploy-x86_64.AppImage \
           --appdir AppDir \
-          --executable build/linux/x64/release/bundle/Distribute \
+          --executable AppDir/usr/bin/Distribute \
           --desktop-file linux/net.sourceloc.distributeapp.desktop \
           --icon-file distribute.png \
           --output appimage
