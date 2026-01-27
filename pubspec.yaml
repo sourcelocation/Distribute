@@ -61,7 +61,7 @@ dependencies:
   json_annotation: ^4.9.0
   package_info_plus: ^9.0.0
   url_launcher: ^6.3.2
-  file_picker: ^10.3.8
+  file_picker: 10.3.8
   disk_space_plus: ^0.2.6
   cupertino_icons: ^1.0.8
   sqlite3: ^2.9.4
