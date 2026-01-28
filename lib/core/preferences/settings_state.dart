@@ -13,6 +13,7 @@ sealed class SettingsState with _$SettingsState {
     required bool discordRPCEnabled,
     required bool dummySoundEnabled,
     required bool debugMode,
+    required bool preloadNextSongEnabled,
     required String? customDownloadPath,
     required String defaultDataPath,
     required VinylStyle vinylStyle,

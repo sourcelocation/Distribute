@@ -15,6 +15,7 @@ class SettingsCubit extends Cubit<SettingsState> {
           discordRPCEnabled: _repo.discordRPCEnabled,
           dummySoundEnabled: _repo.dummySoundEnabled,
           debugMode: _repo.debugMode,
+          preloadNextSongEnabled: _repo.preloadNextSongEnabled,
           customDownloadPath: _repo.customDownloadPath,
           defaultDataPath: _repo.defaultDataPath,
           vinylStyle: _repo.vinylStyle,
@@ -49,6 +50,11 @@ class SettingsCubit extends Cubit<SettingsState> {
   void setDebugMode(bool enabled) async {
     await _repo.setDebugMode(enabled);
     emit(state.copyWith(debugMode: enabled));
+  }
+
+  void setPreloadNextSongEnabled(bool enabled) async {
+    await _repo.setPreloadNextSongEnabled(enabled);
+    emit(state.copyWith(preloadNextSongEnabled: enabled));
   }
 
   Future<void> setCustomDownloadPath(String? path) async {

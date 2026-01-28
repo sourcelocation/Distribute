@@ -39,11 +39,6 @@ class _VinylWidgetState extends State<VinylWidget>
   static const double _acceleration = 0.3;
   static const double _friction = 0.2;
 
-  late ImageProvider _resizedCoverProvider;
-  late ImageProvider _resizedBgProvider;
-  late ImageProvider _resizedStaticProvider;
-  late ImageProvider _resizedEffectProvider;
-
   static const int _cacheWidth = 2048;
 
   @override
@@ -53,50 +48,6 @@ class _VinylWidgetState extends State<VinylWidget>
     if (widget.isPlaying) {
       _velocity = _targetSpeed;
     }
-    _initStaticResources();
-    _initCover();
-    _initBg();
-  }
-
-  @override
-  void didUpdateWidget(VinylWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.coverFile.path != oldWidget.coverFile.path) {
-      _initCover();
-    }
-    if (widget.style != oldWidget.style) {
-      _initBg();
-    }
-  }
-
-  void _initCover() {
-    _resizedCoverProvider = ResizeImage(
-      FileImage(widget.coverFile),
-      width: _cacheWidth,
-    );
-  }
-
-  void _initBg() {
-    _resizedBgProvider = ResizeImage(
-      AssetImage(
-        widget.style == VinylStyle.transparent
-            ? 'assets/vinyl/vinyl-spinning-alt.png'
-            : 'assets/vinyl/vinyl-spinning.png',
-      ),
-      width: _cacheWidth,
-    );
-  }
-
-  void _initStaticResources() {
-    _resizedStaticProvider = ResizeImage(
-      const AssetImage('assets/vinyl/vinyl-static.png'),
-      width: _cacheWidth,
-    );
-
-    _resizedEffectProvider = ResizeImage(
-      const AssetImage('assets/vinyl/vinyl-effect.png'),
-      width: _cacheWidth,
-    );
   }
 
   @override
@@ -141,9 +92,10 @@ class _VinylWidgetState extends State<VinylWidget>
         final Widget coverImage = ClipOval(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: Image(
+            child: Image.file(
+              widget.coverFile,
               key: ValueKey(widget.coverFile.path),
-              image: _resizedCoverProvider,
+              cacheWidth: _cacheWidth,
               width: coverSize,
               height: coverSize,
               fit: BoxFit.cover,
@@ -152,24 +104,29 @@ class _VinylWidgetState extends State<VinylWidget>
           ),
         );
 
-        final Widget vinylBg = Image(
-          image: _resizedBgProvider,
+        final Widget vinylBg = Image.asset(
+          widget.style == VinylStyle.transparent
+              ? 'assets/vinyl/vinyl-spinning-alt.png'
+              : 'assets/vinyl/vinyl-spinning.png',
+          cacheWidth: _cacheWidth,
           width: size,
           height: size,
           fit: BoxFit.contain,
           gaplessPlayback: true,
         );
 
-        final Widget vinylStatic = Image(
-          image: _resizedStaticProvider,
+        final Widget vinylStatic = Image.asset(
+          'assets/vinyl/vinyl-static.png',
+          cacheWidth: _cacheWidth,
           width: size,
           height: size,
           fit: BoxFit.contain,
           gaplessPlayback: true,
         );
 
-        final Widget vinylEffect = Image(
-          image: _resizedEffectProvider,
+        final Widget vinylEffect = Image.asset(
+          'assets/vinyl/vinyl-effect.png',
+          cacheWidth: _cacheWidth,
           width: size,
           height: size,
           fit: BoxFit.contain,

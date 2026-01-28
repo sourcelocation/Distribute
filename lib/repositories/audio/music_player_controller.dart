@@ -425,7 +425,9 @@ class MusicPlayerController {
     if (index != null) {
       final song = _queueManager.state.queue[index];
 
-      if (await isSongAvailable(song) && isNext) {
+      if (await isSongAvailable(song) &&
+          isNext &&
+          settingsRepository.preloadNextSongEnabled) {
         await _audioBackend.preload(song.localPath(rootPath));
       }
 

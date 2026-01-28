@@ -267,7 +267,18 @@ class _DebugSection extends StatelessWidget {
       builder: (context, state) {
         return Column(
           children: [
+            HoverableListTile(
+              leading: SettingsIcon(AppIcons.bugReport),
+              title: const Text('Debug mode'),
+              trailing: Switch.adaptive(
+                value: state.debugMode,
+                onChanged: (value) {
+                  context.read<SettingsCubit>().setDebugMode(value);
+                },
+              ),
+            ),
             if (state.debugMode) ...[
+              const Divider(),
               HoverableListTile(
                 leading: SettingsIcon(AppIcons.webhook),
                 title: const Text('Enable Discord RPC'),
@@ -289,6 +300,18 @@ class _DebugSection extends StatelessWidget {
                 ),
               ),
               HoverableListTile(
+                leading: SettingsIcon(AppIcons.fastForward),
+                title: const Text('Preload next song'),
+                trailing: Switch.adaptive(
+                  value: state.preloadNextSongEnabled,
+                  onChanged: (value) {
+                    context.read<SettingsCubit>().setPreloadNextSongEnabled(
+                      value,
+                    );
+                  },
+                ),
+              ),
+              HoverableListTile(
                 leading: SettingsIcon(
                   AppIcons.deleteForever,
                   color: Colors.red,
@@ -301,16 +324,6 @@ class _DebugSection extends StatelessWidget {
                 onTap: () => _showWipeDatabaseDialog(context),
               ),
             ],
-            HoverableListTile(
-              leading: SettingsIcon(AppIcons.bugReport),
-              title: const Text('Debug mode'),
-              trailing: Switch.adaptive(
-                value: state.debugMode,
-                onChanged: (value) {
-                  context.read<SettingsCubit>().setDebugMode(value);
-                },
-              ),
-            ),
           ],
         );
       },

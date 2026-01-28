@@ -94,8 +94,8 @@ class _MusicPlayerState extends State<MusicPlayer>
     if (_expandController.value < 0.5) {
       _expandController.animateTo(
         1.0,
-        curve: Curves.easeOutCubic,
-        duration: const Duration(milliseconds: 300),
+        curve: Curves.linearToEaseOut,
+        duration: const Duration(milliseconds: 500),
       );
       _focusNode.requestFocus();
     }
@@ -105,78 +105,11 @@ class _MusicPlayerState extends State<MusicPlayer>
     if (!_expandController.isDismissed) {
       _expandController.animateTo(
         0.0,
-        curve: Curves.easeOutCubic,
-        duration: const Duration(milliseconds: 300),
+        curve: Curves.linearToEaseOut,
+        duration: const Duration(milliseconds: 500),
       );
       _focusNode.unfocus();
     }
-  }
-
-  Widget _buildArtwork(BuildContext context, ArtworkData artworkData) {
-    final image = artworkData.imageFileHq != null
-        ? Image.file(
-            artworkData.imageFileHq!,
-            key: ValueKey(artworkData.imageFileHq!.path),
-            cacheWidth: 400,
-            fit: BoxFit.cover,
-            height: double.infinity,
-            width: double.infinity,
-          )
-        : Image.asset(
-            'assets/default-playlist-hq.png',
-            key: const ValueKey('default-asset'),
-            fit: BoxFit.cover,
-            height: double.infinity,
-            width: double.infinity,
-          );
-
-    return Container(
-      key: ValueKey(artworkData.imageFileHq?.path),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: artworkData.backgroundColor,
-        borderRadius: BorderRadius.circular(0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((255.0 * 0.2).toInt()),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(
-            foregroundDecoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.center,
-                colors: [
-                  const Color.fromARGB(80, 0, 0, 0),
-                  const Color.fromARGB(20, 0, 0, 0),
-                ],
-              ),
-            ),
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(
-                sigmaX: 5,
-                sigmaY: 5,
-                tileMode: TileMode.clamp,
-              ),
-              child: OverflowBox(
-                minWidth: 0,
-                minHeight: 0,
-                maxWidth: MediaQuery.of(context).size.width,
-                maxHeight: MediaQuery.of(context).size.width,
-                child: image,
-              ),
-            ),
-          ),
-          Container(color: Colors.black.withAlpha((255 * 0.2).toInt())),
-        ],
-      ),
-    );
   }
 
   Widget _buildMiniContent(
@@ -275,8 +208,8 @@ class _MusicPlayerState extends State<MusicPlayer>
               _enterController.reverse();
               _expandController.animateTo(
                 0.0,
-                curve: Curves.easeOutCubic,
-                duration: const Duration(milliseconds: 300),
+                curve: Curves.linearToEaseOut,
+                duration: const Duration(milliseconds: 500),
               );
             }
 
@@ -298,8 +231,8 @@ class _MusicPlayerState extends State<MusicPlayer>
                     ScrollDirection.idle) {
                   _pageController.animateToPage(
                     targetPage,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.linearToEaseOut,
                   );
                 }
               }
@@ -329,8 +262,8 @@ class _MusicPlayerState extends State<MusicPlayer>
               const double velocityThreshold = 300.0;
               final double velocity = details.primaryVelocity!;
 
-              final Curve curve = Curves.easeOutCubic;
-              const duration = Duration(milliseconds: 300);
+              final Curve curve = Curves.linearToEaseOut;
+              const duration = Duration(milliseconds: 500);
               if (velocity < -velocityThreshold) {
                 _expandController.animateTo(
                   1.0,
@@ -487,7 +420,7 @@ class _MusicPlayerState extends State<MusicPlayer>
                         children: [
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 350),
-                            child: _buildArtwork(context, artworkData),
+                            child: _PlayerArtwork(artworkData: artworkData),
                           ),
                           ScrollConfiguration(
                             behavior: ScrollConfiguration.of(context).copyWith(
@@ -594,6 +527,82 @@ class _MusicPlayerState extends State<MusicPlayer>
           },
         );
       },
+    );
+  }
+}
+
+class _PlayerArtwork extends StatelessWidget {
+  final ArtworkData artworkData;
+
+  const _PlayerArtwork({required this.artworkData});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = artworkData.imageFileHq != null
+        ? Image.file(
+            artworkData.imageFileHq!,
+            key: ValueKey(artworkData.imageFileHq!.path),
+            cacheWidth: 400,
+            fit: BoxFit.cover,
+            height: double.infinity,
+            width: double.infinity,
+          )
+        : Image.asset(
+            'assets/default-playlist-hq.png',
+            key: const ValueKey('default-asset'),
+            fit: BoxFit.cover,
+            height: double.infinity,
+            width: double.infinity,
+          );
+
+    return RepaintBoundary(
+      child: Container(
+        key: ValueKey(artworkData.imageFileHq?.path),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: artworkData.backgroundColor,
+          borderRadius: BorderRadius.circular(0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((255.0 * 0.2).toInt()),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              foregroundDecoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.center,
+                  colors: [
+                    const Color.fromARGB(80, 0, 0, 0),
+                    const Color.fromARGB(20, 0, 0, 0),
+                  ],
+                ),
+              ),
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: 5,
+                  sigmaY: 5,
+                  tileMode: TileMode.clamp,
+                ),
+                child: OverflowBox(
+                  minWidth: 0,
+                  minHeight: 0,
+                  maxWidth: MediaQuery.of(context).size.width,
+                  maxHeight: MediaQuery.of(context).size.width,
+                  child: image,
+                ),
+              ),
+            ),
+            Container(color: Colors.black.withAlpha((255 * 0.2).toInt())),
+          ],
+        ),
+      ),
     );
   }
 }

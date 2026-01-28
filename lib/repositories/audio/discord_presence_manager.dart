@@ -13,8 +13,17 @@ class DiscordPresenceManager {
   });
 
   void listenTo(Stream<ControllerState> stream) {
-    stream.listen(_updatePresence);
+    stream
+        .distinct((previous, next) {
+          return previous.currentSong == next.currentSong &&
+              previous.isPlaying == next.isPlaying &&
+              (previous.position - next.position).abs().inSeconds < 1;
+        })
+        .listen(_updatePresence);
   }
+
+  String? _lastSongId;
+  Duration? _cachedDuration;
 
   void _updatePresence(ControllerState state) async {
     try {
@@ -28,7 +37,21 @@ class DiscordPresenceManager {
 
     if (state.isPlaying && state.currentSong != null) {
       final song = state.currentSong!;
-      final duration = await song.getDuration(settingsRepository.rootPath);
+
+      // Cache duration to avoid heavy I/O and isolate spawning
+      if (_lastSongId != song.id || _cachedDuration == null) {
+        _lastSongId = song.id;
+        _cachedDuration = await song.getDuration(settingsRepository.rootPath);
+      }
+
+      final duration = _cachedDuration;
+      final position = state.position;
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final startTimestamp = now - position.inMilliseconds;
+      final endTimestamp = duration != null
+          ? startTimestamp + duration.inMilliseconds
+          : null;
 
       FlutterDiscordRPC.instance.setActivity(
         activity: RPCActivity(
@@ -47,14 +70,7 @@ class DiscordPresenceManager {
           ],
           details: song.title,
           activityType: ActivityType.listening,
-          timestamps: RPCTimestamps(
-            start: DateTime.now().millisecondsSinceEpoch,
-            end: duration != null
-                ? (DateTime.now().millisecondsSinceEpoch +
-                          duration.inMilliseconds)
-                      .toInt()
-                : null,
-          ),
+          timestamps: RPCTimestamps(start: startTimestamp, end: endTimestamp),
         ),
       );
     } else if (!state.isPlaying) {

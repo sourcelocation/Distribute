@@ -64,6 +64,16 @@ class SettingsRepository {
     await _prefs.setBool(_kDebugMode, enabled);
   }
 
+  static const _kPreloadNextSongEnabled = 'preload_next_song_enabled';
+
+  bool get preloadNextSongEnabled {
+    return _prefs.getBool(_kPreloadNextSongEnabled) ?? true;
+  }
+
+  Future<void> setPreloadNextSongEnabled(bool enabled) async {
+    await _prefs.setBool(_kPreloadNextSongEnabled, enabled);
+  }
+
   String? get customDownloadPath {
     return _prefs.getString(_kCustomDownloadPath);
   }
