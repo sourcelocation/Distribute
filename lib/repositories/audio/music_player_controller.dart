@@ -263,6 +263,7 @@ class MusicPlayerController {
             artworkData = await artworkRepository.getArtworkData(
               newSong.albumId,
               ArtQuality.hq,
+              loadColors: true,
             );
           } catch (_) {}
 
@@ -399,6 +400,7 @@ class MusicPlayerController {
       final artworkData = await artworkRepository.getArtworkData(
         song.albumId,
         ArtQuality.hq,
+        loadColors: true,
       );
 
       if (_state.currentSong?.id != song.id) return;
@@ -435,6 +437,7 @@ class MusicPlayerController {
         final artwork = await artworkRepository.getArtworkData(
           song.albumId,
           ArtQuality.hq,
+          loadColors: false,
         );
 
         final currentIndex = isNext
@@ -483,6 +486,7 @@ class MusicPlayerController {
           final artworkData = await artworkRepository.getArtworkData(
             song.albumId,
             ArtQuality.hq,
+            loadColors: false,
           );
           artUri = artworkData.artUri;
         } catch (e) {

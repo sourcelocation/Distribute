@@ -5,24 +5,32 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
-import 'package:palette_generator/palette_generator.dart';
 
 class ArtworkData {
   final File? imageFileHq;
   final File? imageFileLq;
   final Uri? artUri;
-  final Color primaryColor;
-  final Color backgroundColor;
-  final Color effectColor;
+  final Color? _primaryColor;
+  final Color? _backgroundColor;
+  final Color? _effectColor;
 
   ArtworkData({
     required this.imageFileHq,
     required this.imageFileLq,
     required this.artUri,
-    required this.primaryColor,
-    required this.backgroundColor,
-    required this.effectColor,
-  });
+    Color? primaryColor,
+    Color? backgroundColor,
+    Color? effectColor,
+  }) : _primaryColor = primaryColor,
+       _backgroundColor = backgroundColor,
+       _effectColor = effectColor;
+
+  Color get primaryColor => _primaryColor ?? Colors.grey;
+  Color get backgroundColor => _backgroundColor ?? Colors.grey;
+  Color get effectColor => _effectColor ?? Colors.white;
+
+  // Helper to check if colors are actually loaded
+  bool get hasColors => _primaryColor != null;
 
   Color tintedColor() {
     return Color.lerp(primaryColor, Colors.white, 0.7)!;
@@ -93,20 +101,39 @@ class ArtworkRepository {
     return file;
   }
 
-  Future<ArtworkData> getArtworkData(String albumId, ArtQuality quality) async {
+  Future<ArtworkData> getArtworkData(
+    String albumId,
+    ArtQuality quality, {
+    bool loadColors = true,
+  }) async {
     final cached = _memoryCache[albumId];
     if (cached != null) {
-      // Return cached if it already has the requested quality
       final hasQuality = quality == ArtQuality.hq
           ? cached.imageFileHq != null
           : cached.imageFileLq != null;
-      if (hasQuality) return cached;
+
+      if (hasQuality && (!loadColors || cached.hasColors)) {
+        return cached;
+      }
     }
 
     try {
       final file = await getArtworkFile(albumId, quality);
 
-      if (cached != null) {
+      if (!loadColors) {
+        final data = ArtworkData(
+          imageFileHq: quality == ArtQuality.hq ? file : cached?.imageFileHq,
+          imageFileLq: quality == ArtQuality.lq ? file : cached?.imageFileLq,
+          artUri: Uri.file(file.path),
+          primaryColor: cached?._primaryColor,
+          backgroundColor: cached?._backgroundColor,
+          effectColor: cached?._effectColor,
+        );
+        _memoryCache[albumId] = data;
+        return data;
+      }
+
+      if (cached != null && cached.hasColors) {
         final newData = ArtworkData(
           imageFileHq: quality == ArtQuality.hq ? file : cached.imageFileHq,
           imageFileLq: quality == ArtQuality.lq ? file : cached.imageFileLq,
@@ -119,27 +146,25 @@ class ArtworkRepository {
         return newData;
       }
 
-      final generator = await PaletteGenerator.fromImageProvider(
-        FileImage(file),
+      final scheme = await ColorScheme.fromImageProvider(
+        provider: FileImage(file),
+        brightness: Brightness.dark,
       );
 
-      final primaryColor = generator.lightMutedColor?.color ?? Colors.grey;
-      final backgroundColor =
-          generator.dominantColor?.color ?? Colors.grey.shade900;
-      final isLight = backgroundColor.computeLuminance() > 0.5;
-      final effectColor = isLight ? Colors.black : Colors.white;
+      final primaryColor = scheme.secondary;
+      final backgroundColor = scheme.surface;
+      final oppositeColor = scheme.onSurface;
 
       final data = ArtworkData(
-        imageFileHq: quality == ArtQuality.hq ? file : null,
-        imageFileLq: quality == ArtQuality.lq ? file : null,
+        imageFileHq: quality == ArtQuality.hq ? file : cached?.imageFileHq,
+        imageFileLq: quality == ArtQuality.lq ? file : cached?.imageFileLq,
         artUri: Uri.file(file.path),
         primaryColor: primaryColor,
         backgroundColor: backgroundColor,
-        effectColor: effectColor,
+        effectColor: oppositeColor,
       );
 
       _memoryCache[albumId] = data;
-
       return data;
     } catch (e) {
       return ArtworkData.empty;

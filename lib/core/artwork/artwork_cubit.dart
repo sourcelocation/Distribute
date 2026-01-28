@@ -22,7 +22,11 @@ class ArtworkCubit extends Cubit<ArtworkState> {
     emit(ArtworkLoading());
 
     try {
-      final result = await repository.getArtworkData(albumId, quality);
+      final result = await repository.getArtworkData(
+        albumId,
+        quality,
+        loadColors: false,
+      );
       if (isClosed) return;
 
       final File? targetFile = quality == ArtQuality.hq
