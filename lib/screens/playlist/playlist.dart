@@ -18,6 +18,7 @@ import 'package:distributeapp/components/hoverable_icon_button.dart';
 import 'package:distributeapp/components/hoverable_area.dart';
 import 'package:distributeapp/components/hoverable_list_tile.dart';
 import 'package:distributeapp/core/sync_manager.dart';
+import 'package:distributeapp/components/custom_refresh_indicator.dart';
 
 class PlaylistScreen extends StatefulWidget {
   final String playlistId;
@@ -80,9 +81,19 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Playlist playlist) {
+  Widget _buildHeader(
+    BuildContext context,
+    Playlist playlist,
+    List<Song> songs,
+  ) {
     final icon = null;
     const iconSize = 230.0;
+
+    final isAllDownloaded =
+        songs.isNotEmpty &&
+        songs.isNotEmpty &&
+        songs.every((s) => s.isDownloaded);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -131,21 +142,100 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        FilledButton.tonal(
-          style: FilledButton.styleFrom(minimumSize: const Size(100, 36)),
-          onPressed: () {
-            setState(() {
-              _isEditMode = !_isEditMode;
-            });
-          },
-          child: Row(
-            spacing: 6,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(_isEditMode ? AppIcons.check : AppIcons.menu),
-              Text(_isEditMode ? 'Done' : 'Edit'),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 8,
+          children: [
+            FilledButton.tonal(
+              style: FilledButton.styleFrom(minimumSize: const Size(100, 36)),
+              onPressed: () {
+                setState(() {
+                  _isEditMode = !_isEditMode;
+                });
+              },
+              child: Row(
+                spacing: 6,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_isEditMode ? AppIcons.check : AppIcons.menu),
+                  Text(_isEditMode ? 'Done' : 'Edit'),
+                ],
+              ),
+            ),
+            if (isAllDownloaded)
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(minimumSize: const Size(100, 36)),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text("Remove Downloads"),
+                        content: const Text(
+                          "Are you sure you want to remove all downloads for this playlist? This action cannot be undone.",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              context
+                                  .read<DownloadCubit>()
+                                  .removeDownloadsFromPlaylist(songs);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Removing downloads from playlist",
+                                  ),
+                                ),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              overlayColor: Colors.red,
+                              foregroundColor: Colors.red,
+                            ),
+                            child: const Text("Remove"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: Row(
+                  spacing: 6,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [Icon(AppIcons.delete), Text('Downloads')],
+                ),
+              )
+            else
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(minimumSize: const Size(100, 36)),
+                onPressed: () {
+                  final playlistBloc = context.read<PlaylistBloc>();
+                  playlistBloc.state.maybeWhen(
+                    loaded: (playlist, songs) {
+                      context.read<DownloadCubit>().downloadPlaylist(songs);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Started downloading playlist"),
+                        ),
+                      );
+                    },
+                    orElse: () {},
+                  );
+                },
+                child: Row(
+                  spacing: 6,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [Icon(AppIcons.download), Text('Download')],
+                ),
+              ),
+          ],
         ),
       ],
     );
@@ -153,7 +243,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   Widget _buildList(BuildContext context, Playlist playlist, List<Song> songs) {
     return Expanded(
-      child: RefreshIndicator(
+      child: CustomRefreshIndicator(
         onRefresh: () async {
           await sl<SyncManager>().triggerSync();
         },
@@ -163,7 +253,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           header: Padding(
             key: const ValueKey('header'),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: _buildHeader(context, playlist),
+            child: _buildHeader(context, playlist, songs),
           ),
           itemCount: songs.length,
           padding: EdgeInsets.fromLTRB(
@@ -289,8 +379,10 @@ class _SongTileState extends State<_SongTile> {
                           AppIcons.cloud,
                           color: theme.colorScheme.secondary,
                         ),
-                  pending: () =>
-                      const CircularProgressIndicator(strokeWidth: 2),
+                  pending: () => Icon(
+                    AppIcons.downloading,
+                    color: theme.colorScheme.secondary,
+                  ),
                   loading: (progress) => SizedBox(
                     height: 24,
                     width: 24,

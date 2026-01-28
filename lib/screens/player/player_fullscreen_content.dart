@@ -46,6 +46,7 @@ class FullPlayerContent extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -83,7 +84,7 @@ class FullPlayerContent extends StatelessWidget {
         children: [
           Flexible(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.only(top: 8.0),
               child: AspectRatio(
                 aspectRatio: 1,
                 child: artworkFile != null
@@ -107,8 +108,8 @@ class FullPlayerContent extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(
                     bottom: 40.0,
-                    left: 24.0,
-                    right: 24.0,
+                    left: 28.0,
+                    right: 28.0,
                     top: 8.0,
                   ),
                   child: ConstrainedBox(
@@ -214,27 +215,27 @@ class FullPlayerContent extends StatelessWidget {
                                   const MusicPlayerEvent.skipToPrevious(),
                                 );
                               },
-                              iconSize: AppIcons.isCupertino ? 44 : 56,
+                              iconSize: AppIcons.isCupertino ? 36 : 50,
                               color: artworkData.tintedColor(),
                               icon: Icon(AppIcons.fastRewind),
                             ),
-                            SizedBox(width: AppIcons.isCupertino ? 48 : 32),
+                            SizedBox(width: AppIcons.isCupertino ? 44 : 32),
                             HoverableIconButton(
                               onPressed: onPlayPause,
-                              iconSize: AppIcons.isCupertino ? 56 : 56,
+                              iconSize: AppIcons.isCupertino ? 54 : 50,
                               color: artworkData.tintedColor(),
                               icon: Icon(
                                 isPlaying ? AppIcons.pause : AppIcons.play,
                               ),
                             ),
-                            SizedBox(width: AppIcons.isCupertino ? 48 : 32),
+                            SizedBox(width: AppIcons.isCupertino ? 44 : 32),
                             HoverableIconButton(
                               onPressed: () {
                                 context.read<MusicPlayerBloc>().add(
                                   const MusicPlayerEvent.skipToNext(),
                                 );
                               },
-                              iconSize: AppIcons.isCupertino ? 44 : 56,
+                              iconSize: AppIcons.isCupertino ? 36 : 50,
                               color: artworkData.tintedColor(),
                               icon: Icon(AppIcons.fastForward),
                             ),

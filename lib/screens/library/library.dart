@@ -14,6 +14,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:distributeapp/components/hoverable_icon_button.dart';
 import 'package:distributeapp/components/hoverable_list_tile.dart';
+import 'package:distributeapp/components/custom_refresh_indicator.dart';
 
 class LibraryScreen extends StatelessWidget {
   final String? folderId;
@@ -284,7 +285,7 @@ class LibraryScreen extends StatelessWidget {
       );
     }
 
-    return RefreshIndicator(
+    return CustomRefreshIndicator(
       onRefresh: () async {
         await HapticFeedback.mediumImpact();
         await sl<SyncManager>().triggerSync();

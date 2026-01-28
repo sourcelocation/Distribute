@@ -12,6 +12,7 @@ import 'package:distributeapp/core/artwork/artwork_repository.dart';
 import 'package:distributeapp/model/song.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class MusicPlayer extends StatefulWidget {
@@ -257,13 +258,39 @@ class _MusicPlayerState extends State<MusicPlayer>
       builder: (context, settingsState) {
         return BlocConsumer<MusicPlayerBloc, ControllerState>(
           listenWhen: (previous, current) =>
-              previous.currentSong != current.currentSong,
+              previous.currentSong != current.currentSong ||
+              previous.queueIndex != current.queueIndex,
           listener: (context, state) {
             if (state.currentSong != null) {
               _enterController.forward();
             } else {
               _enterController.reverse();
               _expandController.reverse();
+            }
+
+            if (state.queue.isNotEmpty && _pageController.hasClients) {
+              final length = state.queue.length;
+              final currentPage =
+                  _pageController.page?.round() ?? _getInitialPage();
+              final currentQueueIndex = currentPage % length;
+
+              if (currentQueueIndex != state.queueIndex) {
+                final targetPage =
+                    currentPage - currentQueueIndex + state.queueIndex;
+                final offset =
+                    (targetPage - (_pageController.page ?? targetPage)).abs();
+
+                if (offset > 1) {
+                  _pageController.jumpToPage(targetPage);
+                } else if (_pageController.position.userScrollDirection ==
+                    ScrollDirection.idle) {
+                  _pageController.animateToPage(
+                    targetPage,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              }
             }
           },
           builder: (context, state) {
@@ -449,6 +476,7 @@ class _MusicPlayerState extends State<MusicPlayer>
                                 itemCount: null,
                                 physics: const PageScrollPhysics(),
                                 onPageChanged: (page) {
+                                  if (state.queue.isEmpty) return;
                                   var index = page % state.queue.length;
 
                                   debugPrint("page changed: $index");

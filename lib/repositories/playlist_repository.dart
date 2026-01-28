@@ -1,6 +1,5 @@
 import 'package:collection/collection.dart';
 import 'package:distributeapp/core/database/database.dart';
-import 'package:distributeapp/core/sync_manager.dart';
 import 'package:distributeapp/model/playlist.dart';
 import 'package:distributeapp/model/server_search_result.dart';
 import 'package:distributeapp/model/song.dart';
@@ -12,10 +11,9 @@ import 'package:uuid/uuid.dart';
 
 class PlaylistRepository {
   final PlaylistsDao _dao;
-  final SyncManager _syncManager;
   final SongsApi _songsApi;
 
-  PlaylistRepository(this._dao, this._syncManager, this._songsApi);
+  PlaylistRepository(this._dao, this._songsApi);
 
   Future<void> addSongWithMetadata(
     String playlistId,
@@ -47,7 +45,6 @@ class PlaylistRepository {
       album: albumEntity,
       artists: artistEntities,
     );
-    _syncManager.triggerSync();
   }
 
   Stream<List<Playlist>> getPlaylists(String? folderId) => _dao
@@ -108,27 +105,22 @@ class PlaylistRepository {
     );
 
     await _dao.createPlaylist(newPlaylist);
-    _syncManager.triggerSync();
   }
 
   Future<void> renamePlaylist(String playlistId, String newName) async {
     await _dao.updatePlaylistName(playlistId, newName);
-    _syncManager.triggerSync();
   }
 
   Future<void> deletePlaylist(String playlistId) async {
     await _dao.deletePlaylist(playlistId);
-    _syncManager.triggerSync();
   }
 
   Future<void> addSongToPlaylist(String playlistId, String songId) async {
     await _dao.addSongToPlaylist(playlistId, songId);
-    _syncManager.triggerSync();
   }
 
   Future<void> removeSongFromPlaylist(String playlistId, String songId) async {
     await _dao.removeSongFromPlaylist(playlistId, songId);
-    _syncManager.triggerSync();
   }
 
   Future<List<AvailableFile>> fetchSongFiles(String songId) {
@@ -145,12 +137,10 @@ class PlaylistRepository {
 
   Future<void> moveFolder(String itemId, String? folderId) async {
     await _dao.moveFolder(itemId, folderId);
-    _syncManager.triggerSync();
   }
 
   Future<void> movePlaylist(String itemId, String? folderId) async {
     await _dao.movePlaylist(itemId, folderId);
-    _syncManager.triggerSync();
   }
 
   Future<void> moveSong(
@@ -160,6 +150,5 @@ class PlaylistRepository {
     String? nextOrderId,
   ) async {
     await _dao.moveSong(playlistId, songId, prevOrderId, nextOrderId);
-    _syncManager.triggerSync();
   }
 }

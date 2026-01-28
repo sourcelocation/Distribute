@@ -48,6 +48,46 @@ class DownloadCubit extends Cubit<DownloadState> {
     _processQueue();
   }
 
+  Future<void> downloadPlaylist(List<Song> songs) async {
+    for (final song in songs) {
+      if (song.isDownloaded) continue;
+
+      if (song.fileId != null) {
+        downloadSong(song);
+      } else {
+        // Fetch available files and pick the first one
+        try {
+          final files = await _playlistRepository.fetchSongFiles(song.id);
+          if (files.isNotEmpty) {
+            final file = files.first;
+            await _playlistRepository.updateSongFile(
+              song.id,
+              file.id,
+              file.format,
+            );
+
+            final updatedSong = song.copyWith(
+              fileId: file.id,
+              format: file.format,
+            );
+            downloadSong(updatedSong);
+          }
+        } catch (e) {
+          // Skip if we can't fetch files
+          continue;
+        }
+      }
+    }
+  }
+
+  Future<void> removeDownloadsFromPlaylist(List<Song> songs) async {
+    for (final song in songs) {
+      if (song.isDownloaded) {
+        await deleteFile(song);
+      }
+    }
+  }
+
   Future<void> _processQueue() async {
     if (_isDownloading || _downloadQueue.isEmpty) return;
 

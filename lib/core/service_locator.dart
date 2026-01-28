@@ -106,14 +106,10 @@ Future<void> initDependencies() async {
   sl.registerSingleton<SyncManager>(syncManager);
 
   sl.registerLazySingleton(
-    () => FolderRepository(sl<AppDatabase>().foldersDao, sl()),
+    () => FolderRepository(sl<AppDatabase>().foldersDao),
   );
   sl.registerLazySingleton(
-    () => PlaylistRepository(
-      sl<AppDatabase>().playlistsDao,
-      sl(),
-      sl<SongsApi>(),
-    ),
+    () => PlaylistRepository(sl<AppDatabase>().playlistsDao, sl<SongsApi>()),
   );
   sl.registerLazySingleton(
     () => SearchRepository(sl<AppDatabase>().searchDao, sl<SearchApi>()),

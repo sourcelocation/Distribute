@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SyncManager {
+class SyncManager with WidgetsBindingObserver {
   final AuthRepository authRepo;
   final SyncDao _syncDao;
   final PlaylistsApi _playlistsApi;
@@ -26,9 +26,15 @@ class SyncManager {
   final _statusController = StreamController<SyncStatus>.broadcast();
   Stream<SyncStatus> get statusStream => _statusController.stream;
 
+  StreamSubscription? _queueSubscription;
+  Timer? _debounceTimer;
+  Timer? _periodicTimer;
+
   SyncManager(this.authRepo, this._syncDao, this._playlistsApi);
 
   void initialize() {
+    WidgetsBinding.instance.addObserver(this);
+
     _connectivity.onConnectivityChanged.listen((
       List<ConnectivityResult> result,
     ) {
@@ -41,6 +47,36 @@ class SyncManager {
     if (authRepo.isLoggedIn) {
       triggerSync();
     }
+
+    // 1. Reactive Push Sync (Debounced)
+    _queueSubscription = _syncDao.watchPendingItems().listen((items) {
+      if (items.isNotEmpty) {
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+          triggerSync();
+        });
+      }
+    });
+
+    // 2. Periodic Pull Sync (Every 5 minutes)
+    _periodicTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      triggerSync();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      triggerSync();
+    }
+  }
+
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _queueSubscription?.cancel();
+    _debounceTimer?.cancel();
+    _periodicTimer?.cancel();
+    _statusController.close();
   }
 
   Future<void> triggerSync() async {

@@ -507,6 +507,7 @@ class MusicPlayerController {
       extras: <String, dynamic>{
         'songId': song.id,
         'fileId': song.fileId,
+        'isDownloaded': song.isDownloaded,
         'localPath': resolvedPath,
       },
     );

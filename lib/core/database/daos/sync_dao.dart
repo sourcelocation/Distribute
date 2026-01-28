@@ -27,6 +27,13 @@ class SyncDao extends DatabaseAccessor<AppDatabase> with _$SyncDaoMixin {
     )..orderBy([(t) => OrderingTerm(expression: t.createdAt)])).get();
   }
 
+  // Watch items FIFO
+  Stream<List<SyncQueueData>> watchPendingItems() {
+    return (select(
+      syncQueue,
+    )..orderBy([(t) => OrderingTerm(expression: t.createdAt)])).watch();
+  }
+
   Future<void> deleteItem(int id) {
     return (delete(syncQueue)..where((t) => t.id.equals(id))).go();
   }

@@ -110,6 +110,19 @@ class QueueSheet extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                trailing: isCurrent
+                                    ? Icon(
+                                        AppIcons.equalizer,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      )
+                                    : Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                                 // onTap: handled by HoverableArea
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16.0,

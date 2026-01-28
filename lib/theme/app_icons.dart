@@ -47,6 +47,8 @@ class AppIcons {
       : Icons.check_circle_outline;
   static IconData get cloud =>
       isCupertino ? CupertinoIcons.cloud : Icons.cloud_outlined;
+  static IconData get downloading =>
+      isCupertino ? CupertinoIcons.cloud_download : Icons.cloud_download;
   static IconData get error =>
       isCupertino ? CupertinoIcons.exclamationmark_triangle : Icons.error;
   static IconData get errorOutline =>
