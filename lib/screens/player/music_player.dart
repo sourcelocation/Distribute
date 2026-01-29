@@ -152,6 +152,7 @@ class _MusicPlayerState extends State<MusicPlayer>
     MediaItem? item,
     ArtworkData? artworkData, {
     bool isCurrent = false,
+    bool showMiniProgress = true,
   }) {
     if (item == null || artworkData == null) return null;
 
@@ -163,26 +164,28 @@ class _MusicPlayerState extends State<MusicPlayer>
           artworkData,
           isCurrent ? context.read<MusicPlayerBloc>().state.isPlaying : false,
         ),
-        if (isCurrent)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: BlocBuilder<PositionCubit, Duration>(
-              builder: (context, currentPosition) {
-                final state = context.read<MusicPlayerBloc>().state;
-                final durationMs = state.duration.inMilliseconds;
-                final progress = durationMs > 0
-                    ? currentPosition.inMilliseconds / durationMs
-                    : 0.0;
-                return Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: progress.clamp(0.0, 1.0),
-                    child: Container(height: 3, color: Colors.white),
-                  ),
-                );
-              },
+        if (isCurrent && showMiniProgress)
+          RepaintBoundary(
+            child: Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: BlocBuilder<PositionCubit, Duration>(
+                builder: (context, currentPosition) {
+                  final state = context.read<MusicPlayerBloc>().state;
+                  final durationMs = state.duration.inMilliseconds;
+                  final progress = durationMs > 0
+                      ? currentPosition.inMilliseconds / durationMs
+                      : 0.0;
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: progress.clamp(0.0, 1.0),
+                      child: Container(height: 3, color: Colors.white),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
       ],
@@ -395,7 +398,7 @@ class _MusicPlayerState extends State<MusicPlayer>
                       sigmaY: 7,
                       tileMode: TileMode.clamp,
                     ),
-                    child: rawImage,
+                    // child: rawImage,
                   ),
                 );
 
@@ -431,14 +434,16 @@ class _MusicPlayerState extends State<MusicPlayer>
                                   opacity: animation,
                                   child: child,
                                 ),
-                            child: _PlayerArtwork(
-                              key: ValueKey(
-                                artworkData.imageFileHq?.path ??
-                                    artworkData.imageFileLq?.path ??
-                                    artworkData.artUri?.toString() ??
-                                    'default-artwork',
+                            child: RepaintBoundary(
+                              child: _PlayerArtwork(
+                                key: ValueKey(
+                                  artworkData.imageFileHq?.path ??
+                                      artworkData.imageFileLq?.path ??
+                                      artworkData.artUri?.toString() ??
+                                      'default-artwork',
+                                ),
+                                artworkData: artworkData,
                               ),
-                              artworkData: artworkData,
                             ),
                           ),
                           ScrollConfiguration(
@@ -493,6 +498,7 @@ class _MusicPlayerState extends State<MusicPlayer>
                                     item,
                                     artworkData,
                                     isCurrent: isCurrentItem,
+                                    showMiniProgress: t < 0.5,
                                   );
                                 },
                               ),
@@ -502,7 +508,9 @@ class _MusicPlayerState extends State<MusicPlayer>
                             ignoring: t < 0.5,
                             child: Opacity(
                               opacity: t.clamp(0.0, 1.0),
-                              child: staticFullBackground,
+                              child: RepaintBoundary(
+                                child: staticFullBackground,
+                              ),
                             ),
                           ),
                           IgnorePointer(
@@ -580,53 +588,51 @@ class _PlayerArtwork extends StatelessWidget {
             width: double.infinity,
           );
 
-    return RepaintBoundary(
-      child: Container(
-        key: ValueKey(artworkData.imageFileHq?.path),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: artworkData.backgroundColor,
-          borderRadius: BorderRadius.circular(0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha((255.0 * 0.2).toInt()),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(
-              foregroundDecoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.center,
-                  colors: [
-                    const Color.fromARGB(80, 0, 0, 0),
-                    const Color.fromARGB(20, 0, 0, 0),
-                  ],
-                ),
-              ),
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(
-                  sigmaX: 5,
-                  sigmaY: 5,
-                  tileMode: TileMode.clamp,
-                ),
-                child: OverflowBox(
-                  minWidth: 0,
-                  minHeight: 0,
-                  maxWidth: MediaQuery.of(context).size.width,
-                  maxHeight: MediaQuery.of(context).size.width,
-                  child: image,
-                ),
+    return Container(
+      key: ValueKey(artworkData.imageFileHq?.path),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: artworkData.backgroundColor,
+        borderRadius: BorderRadius.circular(0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((255.0 * 0.2).toInt()),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            foregroundDecoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.center,
+                colors: [
+                  const Color.fromARGB(80, 0, 0, 0),
+                  const Color.fromARGB(20, 0, 0, 0),
+                ],
               ),
             ),
-            Container(color: Colors.black.withAlpha((255 * 0.2).toInt())),
-          ],
-        ),
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(
+                sigmaX: 5,
+                sigmaY: 5,
+                tileMode: TileMode.clamp,
+              ),
+              child: OverflowBox(
+                minWidth: 0,
+                minHeight: 0,
+                maxWidth: MediaQuery.of(context).size.width,
+                maxHeight: MediaQuery.of(context).size.width,
+                child: image,
+              ),
+            ),
+          ),
+          Container(color: Colors.black.withAlpha((255 * 0.2).toInt())),
+        ],
       ),
     );
   }
