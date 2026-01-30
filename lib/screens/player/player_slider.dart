@@ -20,13 +20,24 @@ class MusicPlayerSliderState extends State<MusicPlayerSlider> {
     return RepaintBoundary(
       child: BlocBuilder<PositionCubit, Duration>(
         buildWhen: (prev, curr) {
-          if (_dragValue != null) return false;
+          if (_dragValue != null) {
+            final dragSeconds = _dragValue!.toInt();
+            final currSeconds = curr.inSeconds;
+            if (currSeconds < dragSeconds) return false;
+          }
           return prev.inSeconds != curr.inSeconds;
         },
         builder: (context, currentPosition) {
           final totalDuration = context.select(
             (MusicPlayerBloc b) => b.state.duration,
           );
+          // Once the bloc position catches up, clear the local override
+          if (_dragValue != null &&
+              currentPosition.inSeconds >= _dragValue!.toInt()) {
+            _dragValue = null;
+          }
+          final displayPosition =
+              _dragValue ?? currentPosition.inSeconds.toDouble();
           return Column(
             children: [
               SliderTheme(
@@ -47,7 +58,7 @@ class MusicPlayerSliderState extends State<MusicPlayerSlider> {
                 child: Slider(
                   min: 0.0,
                   max: totalDuration.inSeconds.toDouble(),
-                  value: _dragValue ?? currentPosition.inSeconds.toDouble(),
+                  value: displayPosition,
                   onChanged: (value) {
                     setState(() {
                       _dragValue = value;
@@ -57,7 +68,6 @@ class MusicPlayerSliderState extends State<MusicPlayerSlider> {
                     context.read<MusicPlayerBloc>().add(
                       MusicPlayerEvent.seek(Duration(seconds: value.toInt())),
                     );
-                    setState(() => _dragValue = null);
                   },
                 ),
               ),
@@ -66,7 +76,9 @@ class MusicPlayerSliderState extends State<MusicPlayerSlider> {
                 child: Row(
                   children: [
                     Text(
-                      _formatDuration(currentPosition),
+                      _formatDuration(
+                        Duration(seconds: displayPosition.toInt()),
+                      ),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const Spacer(),
