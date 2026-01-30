@@ -112,6 +112,8 @@ class _VinylWidgetState extends State<VinylWidget>
       builder: (context, constraints) {
         final size = constraints.biggest.shortestSide;
         final coverSize = size * coverRatio;
+        final devicePixelRatio = MediaQuery.of(context).devicePixelRatio * 1.0;
+        final cacheDimension = _resolveCacheDimension(size, devicePixelRatio);
 
         final Widget coverImage = ClipOval(
           child: AnimatedSwitcher(
@@ -119,7 +121,7 @@ class _VinylWidgetState extends State<VinylWidget>
             child: Image.file(
               widget.coverFile,
               key: ValueKey(widget.coverFile.path),
-              cacheWidth: _cacheWidth,
+              cacheWidth: cacheDimension,
               width: coverSize,
               height: coverSize,
               fit: BoxFit.cover,
@@ -132,7 +134,7 @@ class _VinylWidgetState extends State<VinylWidget>
           widget.style == VinylStyle.transparent
               ? 'assets/vinyl/vinyl-spinning-alt.png'
               : 'assets/vinyl/vinyl-spinning.png',
-          cacheWidth: _cacheWidth,
+          cacheWidth: cacheDimension,
           width: size,
           height: size,
           fit: BoxFit.contain,
@@ -141,7 +143,7 @@ class _VinylWidgetState extends State<VinylWidget>
 
         final Widget vinylStatic = Image.asset(
           'assets/vinyl/vinyl-static.png',
-          cacheWidth: _cacheWidth,
+          cacheWidth: cacheDimension,
           width: size,
           height: size,
           fit: BoxFit.contain,
@@ -150,7 +152,7 @@ class _VinylWidgetState extends State<VinylWidget>
 
         final Widget vinylEffect = Image.asset(
           'assets/vinyl/vinyl-effect.png',
-          cacheWidth: _cacheWidth,
+          cacheWidth: cacheDimension,
           width: size,
           height: size,
           fit: BoxFit.contain,
@@ -176,82 +178,74 @@ class _VinylWidgetState extends State<VinylWidget>
                 children: [
                   AnimatedBuilder(
                     animation: _rotationNotifier,
-                    builder: (context, _) {
+                    builder: (context, child) {
                       final double angle =
                           _rotationNotifier.value * 2 * math.pi;
 
-                      return Transform.rotate(
-                        angle: angle,
-                        child: ClipRect(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              coverImage,
-                              // Circle Blur in the middle, enabled in settings
-                              widget.style == VinylStyle.transparent
-                                  ? Center(
-                                      child: Container(
-                                        width: size * 0.33,
-                                        height: size * 0.33,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
+                      return Transform.rotate(angle: angle, child: child);
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        coverImage,
+                        // Circle Blur in the middle, enabled in settings
+                        widget.style == VinylStyle.transparent
+                            ? Center(
+                                child: Container(
+                                  width: size * 0.33,
+                                  height: size * 0.33,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 5,
+                                      sigmaY: 5,
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.05,
                                         ),
-                                        child: BackdropFilter(
-                                          filter: ImageFilter.blur(
-                                            sigmaX: 5,
-                                            sigmaY: 5,
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.1,
                                           ),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Colors.white.withValues(
-                                                alpha: 0.05,
-                                              ),
-                                              border: Border.all(
-                                                color: Colors.white.withValues(
-                                                  alpha: 0.1,
-                                                ),
-                                                width: 0.5,
-                                              ),
-                                            ),
-                                          ),
+                                          width: 0.5,
                                         ),
                                       ),
-                                    )
-                                  : SizedBox.shrink(),
-                              vinylBg,
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : SizedBox.shrink(),
+                        vinylBg,
+                      ],
+                    ),
                   ),
 
                   vinylStatic,
 
-                  ClipRect(
-                    child: AnimatedBuilder(
-                      animation: _rotationNotifier,
-                      builder: (context, _) {
-                        final double angle =
-                            _rotationNotifier.value * 2 * math.pi;
-                        return ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return LinearGradient(
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                              colors: gradientColors,
-                              stops: const [0.0, 0.4, 0.5, 0.6, 1.0],
-                            ).createShader(bounds);
-                          },
-                          blendMode: BlendMode.dstIn,
-                          child: Transform.rotate(
-                            angle: angle,
-                            child: vinylEffect,
-                          ),
-                        );
-                      },
-                    ),
+                  AnimatedBuilder(
+                    animation: _rotationNotifier,
+                    builder: (context, child) {
+                      final double angle =
+                          _rotationNotifier.value * 2 * math.pi;
+                      return ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: gradientColors,
+                            stops: const [0.0, 0.4, 0.5, 0.6, 1.0],
+                          ).createShader(bounds);
+                        },
+                        blendMode: BlendMode.dstIn,
+                        child: Transform.rotate(angle: angle, child: child),
+                      );
+                    },
+                    child: vinylEffect,
                   ),
                 ],
               ),
@@ -260,5 +254,10 @@ class _VinylWidgetState extends State<VinylWidget>
         );
       },
     );
+  }
+
+  int _resolveCacheDimension(double size, double devicePixelRatio) {
+    final int requested = math.max(1, (size * devicePixelRatio).ceil());
+    return math.min(_cacheWidth, requested);
   }
 }
