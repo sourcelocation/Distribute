@@ -1,0 +1,7 @@
+__debug*
+.vscode/
+tmp/
+**/.DS_Store
+data/
+.env
+docs/swagger.yaml

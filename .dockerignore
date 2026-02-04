@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+.github
+
+# OS
+.DS_Store
+
+# Paths not needed for API/Backend builds
+app/
+landing/
+docs/
+
+# Node
+admin/node_modules/
+admin/dist/
+admin/coverage/
+
+# Go build artifacts
+api/data/
+api/tmp/
+api/bin/
+api/vendor/

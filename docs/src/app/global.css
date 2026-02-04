@@ -1,0 +1,17 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+@import 'fumadocs-openapi/css/preset.css';
+
+@layer base {
+    :root {
+        --primary: 133 100% 65%;
+
+        --primary-foreground: 140 10% 10%;
+    }
+
+    .dark {
+        --primary: 133 100% 65%;
+        --primary-foreground: 140 10% 10%;
+    }
+}

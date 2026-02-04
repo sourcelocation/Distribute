@@ -1,0 +1,311 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary: #00FFC2;
+  --color-secondary: #F97316;
+  --color-bg-dark: #050708;
+  --color-panel-dark: #0A0C0E;
+  --color-border-cyan: rgba(0, 255, 194, 0.3);
+
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+@layer base {
+  :root {
+    /* FUI Mapped Variables - Force Dark Theme */
+    --background: #050708;       /* --color-bg-dark */
+    --foreground: #94a3b8;       /* text-slate-400 */
+    
+    --card: #0A0C0E;             /* --color-panel-dark */
+    --card-foreground: #94a3b8;
+    
+    --popover: #0A0C0E;
+    --popover-foreground: #94a3b8;
+    
+    --primary: #00FFC2;          /* --color-primary */
+    --primary-foreground: #050708;
+    
+    --secondary: #F97316;        /* --color-secondary */
+    --secondary-foreground: #ffffff;
+    
+    --muted: rgba(255, 255, 255, 0.05);
+    --muted-foreground: #64748b;
+    
+    --accent: rgba(0, 255, 194, 0.1); /* Hover states */
+    --accent-foreground: #00FFC2;
+    
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    
+    --border: rgba(255, 255, 255, 0.1);
+    --input: rgba(255, 255, 255, 0.1);
+    --ring: rgba(0, 255, 194, 0.5);
+    
+    --radius: 0rem;              /* FUI Sharp Edges */
+
+    --chart-1: #00FFC2;
+    --chart-2: #F97316;
+    --chart-3: #2662d9;
+    --chart-4: #e23670;
+    --chart-5: #e88c30;
+    
+    --sidebar: #0A0C0E;
+    --sidebar-foreground: #94a3b8;
+    --sidebar-primary: #00FFC2;
+    --sidebar-primary-foreground: #050708;
+    --sidebar-accent: rgba(0, 255, 194, 0.1);
+    --sidebar-accent-foreground: #00FFC2;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: #00FFC2;
+  }
+
+  .dark {
+    /* Same as root since FUI is dark-only basically, but keeping for compatibility */
+    --background: #050708;
+    --foreground: #94a3b8;
+    --card: #0A0C0E;
+    --card-foreground: #94a3b8;
+    --popover: #0A0C0E;
+    --popover-foreground: #94a3b8;
+    --primary: #00FFC2;
+    --primary-foreground: #050708;
+    --secondary: #F97316;
+    --secondary-foreground: #ffffff;
+    --muted: rgba(255, 255, 255, 0.05);
+    --muted-foreground: #64748b;
+    --accent: rgba(0, 255, 194, 0.1);
+    --accent-foreground: #00FFC2;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: rgba(255, 255, 255, 0.1);
+    --input: rgba(255, 255, 255, 0.1);
+    --ring: rgba(0, 255, 194, 0.5);
+    --radius: 0rem;
+    --chart-1: #00FFC2;
+    --chart-2: #F97316;
+    --chart-3: #2662d9;
+    --chart-4: #e23670;
+    --chart-5: #e88c30;
+    --sidebar: #0A0C0E;
+    --sidebar-foreground: #94a3b8;
+    --sidebar-primary: #00FFC2;
+    --sidebar-primary-foreground: #050708;
+    --sidebar-accent: rgba(0, 255, 194, 0.1);
+    --sidebar-accent-foreground: #00FFC2;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    --sidebar-ring: #00FFC2;
+  }
+}
+
+/* Shadcn Inline Theme Mappings */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    /* Merged FUI + Shadcn Body */
+    @apply bg-background text-foreground font-mono text-[12px] uppercase tracking-wider overflow-hidden h-screen flex flex-col;
+  }
+}
+
+@layer components {
+  /* FUI Components */
+  .scanline {
+    @apply fixed top-0 left-0 w-full h-[2px] pointer-events-none z-50;
+    background: rgba(0, 255, 194, 0.05);
+    animation: scanline 8s linear infinite;
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(0, 255, 194, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 194, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .panel {
+    @apply bg-card border border-border relative; /* Updated to use shadcn vars which are mapped to FUI */
+    box-shadow: inset 0 0 20px rgba(0, 255, 194, 0.02);
+  }
+
+  .sidebar-btn {
+    @apply flex items-center gap-3 p-3 px-4 text-foreground cursor-pointer transition-all border-l-2 border-transparent hover:bg-white/5 hover:text-white;
+  }
+
+  .sidebar-btn.active {
+    @apply bg-white/5 text-primary border-primary;
+  }
+
+  .corner-bracket {
+    @apply absolute w-3 h-3 border-primary z-10;
+  }
+
+  .corner-tl {
+    @apply top-[-1px] left-[-1px] border-t-2 border-l-2;
+  }
+
+  .corner-tr {
+    @apply top-[-1px] right-[-1px] border-t-2 border-r-2;
+  }
+
+  .corner-bl {
+    @apply bottom-[-1px] left-[-1px] border-b-2 border-l-2;
+  }
+
+  .corner-br {
+    @apply bottom-[-1px] right-[-1px] border-b-2 border-r-2;
+  }
+
+  .glitch-hover:hover {
+    animation: glitch 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
+    color: var(--color-primary);
+    text-shadow: 2px 0 var(--color-secondary), -2px 0 var(--color-primary);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(0, 255, 194, 0.5);
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .fui-btn-bg {
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 194, 0.1), transparent);
+    background-size: 200% 100%;
+    transition: background-position 0.3s ease;
+  }
+
+  .fui-btn-bg:hover {
+    background-position: -100% 0;
+  }
+
+  .glow-border-h {
+    @apply absolute left-1/2 -translate-x-1/2 w-1/2 h-[1px] z-10;
+    background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+    box-shadow: 0 0 10px var(--color-primary);
+  }
+
+  .glow-border-v {
+    @apply absolute top-1/2 -translate-y-1/2 w-[1px] h-1/2 z-10;
+    background: linear-gradient(180deg, transparent, var(--color-primary), transparent);
+    box-shadow: 0 0 10px var(--color-primary);
+  }
+}
+
+/* Keyframes */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes glitch {
+  0% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(2px, 2px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
+  100% {
+    transform: translate(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+::-webkit-scrollbar {
+  @apply w-1;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}

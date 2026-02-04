@@ -1,0 +1,52 @@
+services:
+  distributor:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+      target: dev
+    image: distributor:dev
+    container_name: distributor
+    restart: unless-stopped
+    ports:
+      - "8585:8585"
+      - "40000:40000"
+    security_opt:
+      - "seccomp:unconfined"
+    cap_add:
+      - SYS_PTRACE
+    volumes:
+      - ./data:/app/storage
+      - ./data/db:/app/data/db
+      - ./:/app
+      - gomod-cache:/go/pkg/mod
+    environment:
+      - LISTEN_ON=0.0.0.0:8585
+      - MEILI_URL=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
+    depends_on:
+      - meilisearch
+    networks:
+      - distribute
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.31
+    container_name: distributor_meili
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
+      - MEILI_LOG_LEVEL=warn
+    volumes:
+      - meilisearch_data:/meili_data
+    networks:
+      - distribute
+
+networks:
+  distribute:
+    name: distribute
+    external: true
+
+volumes:
+  meilisearch_data:
+  gomod-cache:

@@ -1,0 +1,67 @@
+{
+    "categories": [
+        {
+            "title": "## 🚀 Features",
+            "labels": [
+                "feature",
+                "feat"
+            ]
+        },
+        {
+            "title": "## 🐛 Bug Fixes",
+            "labels": [
+                "fix",
+                "bug"
+            ]
+        },
+        {
+            "title": "## 🧪 Tests",
+            "labels": [
+                "test"
+            ]
+        },
+        {
+            "title": "## ⚙️ CI/CD",
+            "labels": [
+                "ci"
+            ]
+        },
+        {
+            "title": "## 📖 Documentation",
+            "labels": [
+                "docs"
+            ]
+        },
+        {
+            "title": "## ♻️ Refactoring",
+            "labels": [
+                "refactor"
+            ]
+        },
+        {
+            "title": "## 🧹 Chore",
+            "labels": [
+                "chore"
+            ]
+        },
+        {
+            "title": "## 🎨 Style",
+            "labels": [
+                "style"
+            ]
+        }
+    ],
+    "ignore_labels": [
+        "ignore"
+    ],
+    "template": "${{CHANGELOG}}\n\n<details>\n<summary><b>Full List of Changes</b></summary>\n\n${{UNCATEGORIZED}}\n</details>",
+    "pr_template": "- ${{TITLE}} #${{NUMBER}}",
+    "empty_summary_template": "No significant changes.",
+    "label_extractor": [
+        {
+            "pattern": "^(feat|feature|fix|bug|test|ci|build|docs|perf|refactor|chore|style)(\\(.+\\))?:",
+            "target": "$1",
+            "flags": "i"
+        }
+    ]
+}

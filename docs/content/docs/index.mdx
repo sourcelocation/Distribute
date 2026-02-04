@@ -1,0 +1,102 @@
+---
+title: Download and install
+description: Instructions to get started
+---
+
+Distribute Project requires two 2 components to function: the DistributeApp (client) and Distributor (server).
+
+### Prerequisites
+- A Linux server
+- Electricity ⚡️
+
+
+## Step 1. Installing DistributeApp
+
+To download the DistributeApp, visit the [official GitHub releases](https://github.com/ProjectDistribute/Distribute/releases). Choose the version that corresponds to your operating system (Windows, macOS, Linux, iOS, Android). 
+
+## Step 2. Installing Distributor
+
+Distributor is the server component that works alongside DistributeApp to manage and sync your music files. It's currently only available for Linux (x86, arm64). To install Distributor, follow these steps:
+
+### Option 1: Using the Installer Script
+TODO
+
+### Option 2: Manual Installation
+1. Download [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) if you haven't already.
+2. Create a directory for Distributor:
+    ```bash
+    mkdir -p ~/distributor
+    cd ~/distributor
+    ```
+3. Create a `docker-compose.yml` file:
+    ```bash
+    nano docker-compose.yml
+    ```
+4. Add the following configuration to the `docker-compose.yml` file:
+    ```yaml
+    services:
+      distributor:
+        restart: unless-stopped
+        ports:
+          - "8585:8585"
+        volumes:
+          - ./data:/app/storage # You can specify your HDD here
+          - ./data/db:/app/data/db # Preferably SSD
+        image: sourcelocation/distributor:latest
+        environment:
+          - LISTEN_ON=0.0.0.0:8585
+          - MEILI_URL=http://meilisearch:7700
+          - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
+        depends_on:
+          - meilisearch
+        networks:
+          - distribute
+
+      meilisearch:
+        image: getmeili/meilisearch:v1.31
+        container_name: distributor_meili
+        restart: unless-stopped
+        ports:
+          - "127.0.0.1:7700:7700"
+        environment:
+          - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
+          - MEILI_LOG_LEVEL=warn
+        volumes:
+          - meilisearch_data:/meili_data
+        networks:
+          - distribute
+
+    networks:
+      distribute:
+        name: distribute
+
+    volumes:
+      meilisearch_data:
+
+5. Create a `.env` file:
+    ```bash
+    echo "MEILI_MASTER_KEY=$(openssl rand -hex 32)" > .env
+    ```
+      
+6. Start Distributor using Docker Compose:
+    ```bash
+    docker compose up -d
+    ```
+
+7. The server is now running on `[::]:8585`, set up a reverse proxy with HTTPS using Nginx and Let's Encrypt for secure access. (Nginx Proxy Manager is recommended)
+
+8. Access Distributor admin panel by navigating to `https://your-server-ip` in your web browser. Set up an admin account there before using Distribute App.
+
+
+## Step 3. Connecting DistributeApp to Distributor
+
+<Callout type="info" title="Server Setup Required">
+  Don't have a server link? You need to set up Distributor first. Follow the instructions in Step 3 below to install Distributor on your server.
+</Callout>
+
+1. Open Distribute (App) on your device.
+2. Go to the Settings tab.
+3. Enter the address that is used to access Distributor (e.g., `https://distributor.example.com`). If you used the script installer, you will see it displayed at the end of the installation.
+4. Log in using your credentials (cry about it if you don't have em, cause this is a beta and you literally can't create users yet).
+
+Congratulations! You have successfully installed DistributeApp and Distributor. You can now start syncing and managing your music files across your devices.

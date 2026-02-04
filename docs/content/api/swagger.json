@@ -1,0 +1,92 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Distributor API",
+    "contact": {},
+    "version": "1.0"
+  },
+  "paths": {
+    "/songs": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "songs"
+        ],
+        "summary": "Upload song",
+        "parameters": [
+          {
+            "type": "file",
+            "description": "Song file",
+            "name": "song",
+            "in": "formData",
+            "required": true
+          }
+        ],
+        "responses": {}
+      }
+    },
+    "/songs/download/{file_id}": {
+      "get": {
+        "description": "Downloads a song file using the custom context wrapper",
+        "produces": [
+          "application/octet-stream"
+        ],
+        "tags": [
+          "songs"
+        ],
+        "summary": "Download song",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "File ID",
+            "name": "file_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {}
+      }
+    },
+    "/users/{user_id}/folders": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "tags": [
+          "folders"
+        ],
+        "summary": "Get folder contents",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "User ID",
+            "name": "user_id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {}
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "description": "Type \"Bearer\" followed by a space and JWT token.",
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
+}
