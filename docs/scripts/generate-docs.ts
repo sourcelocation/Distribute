@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const FALLBACK_SWAGGER_URL =
   process.env.SWAGGER_URL ||
-  'https://raw.githubusercontent.com/ProjectDistribute/distributor/refs/heads/main/docs/swagger.json';
+  'https://raw.githubusercontent.com/ProjectDistribute/distributor/refs/heads/master/docs/swagger.json';
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const localSwaggerPath = path.join(repoRoot, 'api', 'docs', 'swagger.json');
