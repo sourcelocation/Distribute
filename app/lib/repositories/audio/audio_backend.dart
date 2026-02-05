@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AudioBackend {
   AudioSession? _session;
@@ -22,6 +24,8 @@ class AudioBackend {
   Future<void> init() async {
     if (_dummySoundEnabled) return;
 
+    await _ensureSoLoudTempDir();
+
     await SoLoud.instance.init(
       sampleRate: 44100,
       bufferSize: 2048,
@@ -31,6 +35,16 @@ class AudioBackend {
     _session = await AudioSession.instance;
     await _session!.configure(AudioSessionConfiguration.music());
     _handleInterruptions(_session!);
+  }
+
+  Future<void> _ensureSoLoudTempDir() async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final soloudTemp = Directory('${tempDir.path}/SoLoudLoader-Temp-Files');
+      await soloudTemp.create(recursive: true);
+    } catch (e) {
+      debugPrint('AudioBackend: Failed to create SoLoud temp dir: $e');
+    }
   }
 
   Future<void> play(String localPath) async {
