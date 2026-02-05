@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:distributeapp/core/preferences/settings_repository.dart';
 import 'package:distributeapp/core/artwork/artwork_processor.dart';
@@ -59,13 +58,6 @@ class ArtworkRepository {
   final SettingsRepository settings;
 
   ArtworkRepository(this.client, {required this.settings});
-
-  Color _vibrantize(Color color) {
-    final hsl = HSLColor.fromColor(color);
-    final saturation = (hsl.saturation + 0.0).clamp(0.0, 1.0);
-    final lightness = (hsl.lightness - 0.25).clamp(0.0, 1.0);
-    return hsl.withSaturation(saturation).withLightness(lightness).toColor();
-  }
 
   Color _contrastMonochrome(Color color) {
     return color.computeLuminance() > 0.5 ? Colors.black : Colors.white;

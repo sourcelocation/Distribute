@@ -15,6 +15,8 @@ Decentralized music platform with an offline-first Flutter client and a Go backe
 - **State/Navigation**: Bloc + `go_router`.
 - **UI**: `AppIcons` for cross-platform icons.
 - **Note**: `freezed` classes require the `abstract` keyword in recent versions.
+- **Analyse**: `flutter analyze`
+- **Tests**: No tests. Only manual checks.
 
 ## Server (Go)
 - **Features**: Audio serving, trusted-server sync (push/pull), JWT auth, admin tools (`/doctor`, re-indexing, content management).

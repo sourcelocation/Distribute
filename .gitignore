@@ -49,9 +49,7 @@ pnpm-debug.log*
 .shared/
 .vite
 out/
-coverage/
 dist/
-dist-ssr/
 
 # Go
 **/bin/
@@ -66,7 +64,5 @@ landing/.next/
 landing/build/
 
 # Misc
-*.log
 .env
 .env.*
-.coverage

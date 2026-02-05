@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -109,7 +108,8 @@ class _VinylWidgetState extends State<VinylWidget>
     final double dt = (elapsed - _lastElapsed).inMicroseconds / 1000000.0;
     _lastElapsed = elapsed;
     final targetSpeed = widget.easterEggs[0] ? 3.0 : _targetSpeed;
-    final shouldSpin = widget.isPlaying &&
+    final shouldSpin =
+        widget.isPlaying &&
         (widget.isWindowFocused || widget.keepSpinningWhenUnfocused);
 
     if (shouldSpin) {
