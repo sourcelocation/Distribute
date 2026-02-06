@@ -290,7 +290,7 @@ class _VinylWidgetState extends State<VinylWidget>
                       baseColor: widget.backgroundColor,
                       coverRadius: _coverRatio / 1.0,
                       style: widget.style,
-                      coverScale: 1.00,
+                      coverScale: 1.05,
                     ),
                   ),
                 )
