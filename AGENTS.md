@@ -15,8 +15,6 @@ Decentralized music platform with an offline-first Flutter client and a Go backe
 - **State/Navigation**: Bloc + `go_router`.
 - **UI**: `AppIcons` for cross-platform icons.
 - **Note**: `freezed` classes require the `abstract` keyword in recent versions.
-- **Analyse**: `flutter analyze`
-- **Tests**: No tests. Only manual checks.
 
 ## Server (Go)
 - **Features**: Audio serving, trusted-server sync (push/pull), JWT auth, admin tools (`/doctor`, re-indexing, content management).
@@ -36,3 +34,7 @@ Decentralized music platform with an offline-first Flutter client and a Go backe
 - **Config**: Uses development `docker-compose.yml`.
 - **Auth**: `Bearer <token>`.
 - **Validation**: `go-playground/validator`.
+
+## Testing
+- **Client**: Since you may be running in a git worktree, `flutter pub get` and `dart run build_runner build --delete-conflicting-outputs` will fail. Ignore dependency and @freezed errors, but fix any other errors.
+- **Server**: No tests. Don't restart the server after changes.
