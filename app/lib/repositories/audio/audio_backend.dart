@@ -47,16 +47,16 @@ class AudioBackend {
     }
   }
 
-  Future<void> play(String localPath) async {
+  Future<void> play(String source) async {
     if (_dummySoundEnabled) return;
 
-    if (_preparedJob?.path == localPath && _preparedJob!.isLoaded) {
+    if (_preparedJob?.path == source && _preparedJob!.isLoaded) {
       await stop(disposeSession: false, clearPrepared: false);
       _currentJob = _preparedJob;
       _preparedJob = null;
     } else {
       await stop(disposeSession: false);
-      _currentJob = _PlaybackJob(localPath, _session!, _onJobFinished);
+      _currentJob = _PlaybackJob(source, _session!, _onJobFinished);
       await _currentJob!.load();
     }
 
@@ -69,14 +69,14 @@ class AudioBackend {
     }
   }
 
-  Future<void> preload(String localPath) async {
+  Future<void> preload(String source) async {
     if (_dummySoundEnabled) return;
 
-    if (_preparedJob?.path == localPath) return;
+    if (_preparedJob?.path == source) return;
 
     await _preparedJob?.stop();
 
-    final job = _PlaybackJob(localPath, _session!, _onJobFinished);
+    final job = _PlaybackJob(source, _session!, _onJobFinished);
     _preparedJob = job;
 
     try {
@@ -204,7 +204,10 @@ class _PlaybackJob {
     if (_isCancelled) return;
 
     try {
-      final source = await SoLoud.instance.loadFile(path);
+      final isRemote = path.startsWith('http://') || path.startsWith('https://');
+      final source = isRemote
+          ? await SoLoud.instance.loadUrl(path)
+          : await SoLoud.instance.loadFile(path);
       if (_isCancelled) {
         SoLoud.instance.disposeSource(source);
         return;

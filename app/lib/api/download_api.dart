@@ -13,6 +13,11 @@ class DownloadApi {
 
   String get _rootPath => settings.rootPath;
 
+  String getStreamUrl(String fileId) {
+    final base = settings.serverURL;
+    return '$base/api/songs/stream/$fileId';
+  }
+
   Future<void> downloadFile(
     Song song,
     void Function(int, int)? onReceiveProgress,

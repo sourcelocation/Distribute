@@ -70,6 +70,25 @@ class MusicPlayerController {
     return await File(localPath).exists();
   }
 
+  Future<_PlaybackSource?> _resolvePlaybackSource(Song song) async {
+    final localPath = song.localPath(rootPath);
+    if (await File(localPath).exists()) {
+      return _PlaybackSource.local(localPath);
+    }
+
+    var fileId = song.fileId;
+    if (fileId == null) {
+      final files = await playlistRepository.fetchSongFiles(song.id);
+      if (files.isEmpty) return null;
+
+      final file = files.first;
+      fileId = file.id;
+      await playlistRepository.updateSongFile(song.id, file.id, file.format);
+    }
+
+    return _PlaybackSource.remote(downloadApi.getStreamUrl(fileId));
+  }
+
   List<Song>? _lastProcessedQueue;
   final Map<String, MediaItem> _mediaItemCache = {};
 
@@ -132,9 +151,6 @@ class MusicPlayerController {
   // --- Playback Actions ---
 
   Future<void> playSong(Song song) async {
-    final isAvailable = await isSongAvailable(song);
-    if (!isAvailable) return;
-
     // Setting queue sets index=0
     _queueManager.setQueue([song]);
     // _onQueueStateChanged will trigger playback
@@ -342,13 +358,11 @@ class MusicPlayerController {
   }
 
   Future<void> _playEntry(Song song) async {
-    final isAvailable = await isSongAvailable(song);
-    if (!isAvailable) {
+    final source = await _resolvePlaybackSource(song);
+    if (source == null) {
       _emitState(_state.copyWith(processingState: AudioProcessingState.error));
       return;
     }
-
-    final localPath = song.localPath(rootPath);
 
     // 2. Emit loading state immediately to update UI
     // We construct a basic media item first to update UI instantly.
@@ -365,13 +379,13 @@ class MusicPlayerController {
     );
 
     try {
-      await _audioBackend.play(localPath);
+      await _audioBackend.play(source.path);
 
       _loadArtworkForSong(song);
 
       final mediaItem = await _createMediaItem(
         song,
-        localPath: localPath,
+        localPath: source.isLocal ? source.path : null,
         loadArtwork: true,
       );
 
@@ -427,10 +441,11 @@ class MusicPlayerController {
     if (index != null) {
       final song = _queueManager.state.queue[index];
 
-      if (await isSongAvailable(song) &&
-          isNext &&
-          settingsRepository.preloadNextSongEnabled) {
-        await _audioBackend.preload(song.localPath(rootPath));
+      if (isNext && settingsRepository.preloadNextSongEnabled) {
+        final source = await _resolvePlaybackSource(song);
+        if (source != null && source.isLocal) {
+          await _audioBackend.preload(source.path);
+        }
       }
 
       try {
@@ -541,4 +556,14 @@ class MusicPlayerController {
     _state = next;
     _stateController.add(_state);
   }
+}
+
+class _PlaybackSource {
+  final String path;
+  final bool isLocal;
+
+  const _PlaybackSource._(this.path, this.isLocal);
+
+  factory _PlaybackSource.local(String path) => _PlaybackSource._(path, true);
+  factory _PlaybackSource.remote(String url) => _PlaybackSource._(url, false);
 }

@@ -16,6 +16,7 @@ class SettingsRepository {
   static const _kDebugMode = 'debug_mode';
   static const _kOnboardingCompleted = 'onboarding_completed';
   static const _kCustomDownloadPath = 'custom_download_path';
+  static const _kDownloadMode = 'download_mode';
 
   String get serverURL {
     return _prefs.getString(_kServerURL) ?? '';
@@ -94,6 +95,14 @@ class SettingsRepository {
     } else {
       await _prefs.setString(_kCustomDownloadPath, path);
     }
+  }
+
+  int get downloadModeIndex {
+    return _prefs.getInt(_kDownloadMode) ?? 0;
+  }
+
+  Future<void> setDownloadModeIndex(int index) async {
+    await _prefs.setInt(_kDownloadMode, index);
   }
 
   static const _kVinylStyle = 'vinyl_style';

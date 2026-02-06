@@ -166,6 +166,7 @@ final GoRouter router = GoRouter(
                       create: (context) => PlaylistBloc(
                         downloadCubit: context.read<DownloadCubit>(),
                         repo: context.read<PlaylistRepository>(),
+                        settingsCubit: context.read<SettingsCubit>(),
                         playlistId: playlistId,
                       )..add(const PlaylistEvent.load()),
                       child: PlaylistScreen(playlistId: playlistId),
