@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/screens/player/player_slider.dart';
 import 'package:distributeapp/screens/player/queue_sheet.dart';
@@ -21,6 +23,7 @@ class FullPlayerContent extends StatelessWidget {
   final bool isWindowFocused;
   final bool keepVinylSpinningWhenUnfocused;
   final VinylStyle style;
+  final bool showArtwork;
 
   const FullPlayerContent({
     super.key,
@@ -33,6 +36,7 @@ class FullPlayerContent extends StatelessWidget {
     required this.isWindowFocused,
     required this.keepVinylSpinningWhenUnfocused,
     required this.style,
+    this.showArtwork = true,
   });
 
   @override
@@ -87,24 +91,34 @@ class FullPlayerContent extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 32),
-            Flexible(
+            Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(top: 8.0),
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: artworkFile != null
-                      ? VinylWidget(
-                          coverFile: artworkFile,
-                          backgroundColor: artworkData.backgroundColor,
-                          effectColor: artworkData.effectColor,
-                          isPlaying: isPlaying,
-                          easterEggs: easterEggs,
-                          isWindowFocused: isWindowFocused,
-                          keepSpinningWhenUnfocused:
-                              keepVinylSpinningWhenUnfocused,
-                          style: style,
-                        )
-                      : const SizedBox(),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final side = min(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+                    final Widget vinyl = (showArtwork && artworkFile != null)
+                        ? VinylWidget(
+                            coverFile: artworkFile,
+                            backgroundColor: artworkData.backgroundColor,
+                            effectColor: artworkData.effectColor,
+                            isPlaying: isPlaying,
+                            easterEggs: easterEggs,
+                            isWindowFocused: isWindowFocused,
+                            keepSpinningWhenUnfocused:
+                                keepVinylSpinningWhenUnfocused,
+                            style: style,
+                          )
+                        : const SizedBox();
+
+                    return Align(
+                      alignment: Alignment.center,
+                      child: SizedBox(width: side, height: side, child: vinyl),
+                    );
+                  },
                 ),
               ),
             ),
