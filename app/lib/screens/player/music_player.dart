@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:distributeapp/blocs/music/position_cubit.dart';
@@ -324,25 +325,6 @@ class _MusicPlayerState extends State<MusicPlayer>
               return const SizedBox.shrink();
             }
 
-            final Widget fullPlayer = GestureDetector(
-              onVerticalDragUpdate: handleDragUpdate,
-              onVerticalDragEnd: handleDragEnd,
-                child: FullPlayerContent(
-                  currentSong: currentSong,
-                  artworkData: artworkData,
-                  safePadding: MediaQuery.of(context).padding,
-                  onCloseTap: _onCloseTap,
-                  isPlaying: isPlaying,
-                  onPlayPause: () => context.read<MusicPlayerBloc>().add(
-                    MusicPlayerEvent.togglePlayPause(),
-                  ),
-                  style: settingsState.vinylStyle,
-                  isWindowFocused: _isWindowFocused,
-                  keepVinylSpinningWhenUnfocused:
-                      settingsState.keepVinylSpinningWhenUnfocused,
-                ),
-            );
-
             return AnimatedBuilder(
               animation: Listenable.merge([
                 _enterController,
@@ -350,6 +332,25 @@ class _MusicPlayerState extends State<MusicPlayer>
               ]),
               builder: (context, _) {
                 final t = _expandController.value;
+                final Widget fullPlayer = GestureDetector(
+                  onVerticalDragUpdate: handleDragUpdate,
+                  onVerticalDragEnd: handleDragEnd,
+                  child: FullPlayerContent(
+                    currentSong: currentSong,
+                    artworkData: artworkData,
+                    safePadding: MediaQuery.of(context).padding,
+                    onCloseTap: _onCloseTap,
+                    isPlaying: isPlaying,
+                    onPlayPause: () => context.read<MusicPlayerBloc>().add(
+                      MusicPlayerEvent.togglePlayPause(),
+                    ),
+                    style: settingsState.vinylStyle,
+                    isWindowFocused: _isWindowFocused,
+                    keepVinylSpinningWhenUnfocused:
+                        settingsState.keepVinylSpinningWhenUnfocused,
+                    showArtwork: t > 0.0,
+                  ),
+                );
 
                 final currentHeight = lerpDouble(
                   _miniHeight,
@@ -413,7 +414,14 @@ class _MusicPlayerState extends State<MusicPlayer>
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          _CrossfadeArtwork(currentArtwork: artworkData),
+                          _CrossfadeArtwork(
+                            currentArtwork: artworkData,
+                            imageSide: lerpDouble(
+                              miniPlayerWidth,
+                              max(maxPlayerHeight, maxPlayerWidth),
+                              t,
+                            )!,
+                          ),
                           ScrollConfiguration(
                             behavior: ScrollConfiguration.of(context).copyWith(
                               dragDevices: {
@@ -528,8 +536,12 @@ class _MusicPlayerState extends State<MusicPlayer>
 /// Widget that displays artwork with crossfade support between song changes
 class _CrossfadeArtwork extends StatefulWidget {
   final ArtworkData currentArtwork;
+  final double imageSide;
 
-  const _CrossfadeArtwork({required this.currentArtwork});
+  const _CrossfadeArtwork({
+    required this.currentArtwork,
+    required this.imageSide,
+  });
 
   @override
   State<_CrossfadeArtwork> createState() => _CrossfadeArtworkState();
@@ -627,30 +639,41 @@ class _CrossfadeArtworkState extends State<_CrossfadeArtwork>
           ),
         ],
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Fading out artwork (previous)
-          if (_fadingOutArtwork != null)
-            AnimatedBuilder(
-              animation: _fadeController,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: 1.0 - _fadeController.value,
-                  child: child,
-                );
-              },
-              child: _buildBlurredLayer(_buildImage(_fadingOutArtwork!)),
-            ),
-          // Fading in artwork (current)
-          AnimatedBuilder(
-            animation: _fadeController,
-            builder: (context, child) {
-              return Opacity(opacity: _fadeController.value, child: child);
-            },
-            child: _buildBlurredLayer(_buildImage(_displayedArtwork!)),
+      child: OverflowBox(
+        alignment: Alignment.center,
+        minWidth: widget.imageSide,
+        minHeight: widget.imageSide,
+        maxWidth: widget.imageSide,
+        maxHeight: widget.imageSide,
+        child: SizedBox(
+          width: widget.imageSide,
+          height: widget.imageSide,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Fading out artwork (previous)
+              if (_fadingOutArtwork != null)
+                AnimatedBuilder(
+                  animation: _fadeController,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: 1.0 - _fadeController.value,
+                      child: child,
+                    );
+                  },
+                  child: _buildBlurredLayer(_buildImage(_fadingOutArtwork!)),
+                ),
+              // Fading in artwork (current)
+              AnimatedBuilder(
+                animation: _fadeController,
+                builder: (context, child) {
+                  return Opacity(opacity: _fadeController.value, child: child);
+                },
+                child: _buildBlurredLayer(_buildImage(_displayedArtwork!)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

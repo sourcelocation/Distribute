@@ -163,7 +163,6 @@ class _VinylWidgetState extends State<VinylWidget>
 
     _coverCacheDimension = cacheDimension;
     _coverFilePath = path;
-    _coverImage = null;
     _disposeCoverStream();
 
     final ImageProvider provider = ResizeImage(
