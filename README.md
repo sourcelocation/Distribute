@@ -41,14 +41,14 @@ Please see wiki for full instructions: https://distribute-docs.sourceloc.net/doc
 2. Project structure:
 
 - `app/` – Flutter mobile client (Bloc, Drift). `flutter pub get && flutter run`.
-- `api/` – Echo REST server + Meilisearch. `go run .` or `docker compose up` from `api/docker-compose.yml`. No extra docker context paths—just run from the root.
+- `api/` – Echo REST server + Meilisearch. `go run .` or `docker compose up` from `api/docker-compose.yml`.
 - `admin/` – Vite + React admin console. `npm install && npm run dev`.
 - `landing/` – Next.js marketing site. `npm install && npm run dev`.
 - `docs/` – Fumadocs site (`source.config.ts`). `npm install && npm run dev`.
 
 3. Pull requests are welcome. For major changes, please contact me first!
 
-Assets (banner + screenshots) live under `github-assets/` for reuse across docs and marketing.
+Assets (banner + screenshots) live under `github-assets/`.
 
 
 ## Roadmap
