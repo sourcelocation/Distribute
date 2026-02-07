@@ -1,5 +1,6 @@
 import 'package:distributeapp/core/preferences/settings_repository.dart';
 import 'package:distributeapp/core/preferences/settings_state.dart';
+import 'package:distributeapp/core/preferences/download_mode.dart';
 import 'package:distributeapp/core/preferences/vinyl_style.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,6 +19,7 @@ class SettingsCubit extends Cubit<SettingsState> {
           preloadNextSongEnabled: _repo.preloadNextSongEnabled,
           keepVinylSpinningWhenUnfocused:
               _repo.keepVinylSpinningWhenUnfocused,
+          downloadMode: DownloadModeX.fromIndex(_repo.downloadModeIndex),
           customDownloadPath: _repo.customDownloadPath,
           defaultDataPath: _repo.defaultDataPath,
           vinylStyle: _repo.vinylStyle,
@@ -67,6 +69,11 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> setCustomDownloadPath(String? path) async {
     await _repo.setCustomDownloadPath(path);
     emit(state.copyWith(customDownloadPath: path));
+  }
+
+  Future<void> setDownloadMode(DownloadMode mode) async {
+    await _repo.setDownloadModeIndex(mode.index);
+    emit(state.copyWith(downloadMode: mode));
   }
 
   void setVinylStyle(VinylStyle style) async {

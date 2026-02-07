@@ -1,5 +1,7 @@
 import 'package:distributeapp/blocs/download_cubit.dart';
 import 'package:distributeapp/core/helpers/playlist_helper.dart';
+import 'package:distributeapp/core/preferences/download_mode.dart';
+import 'package:distributeapp/core/preferences/settings_cubit.dart';
 import 'package:distributeapp/model/server_search_result.dart';
 import 'package:distributeapp/repositories/playlist_repository.dart';
 import 'package:distributeapp/model/playlist.dart';
@@ -64,14 +66,17 @@ class PlaylistState with _$PlaylistState {
 class PlaylistBloc extends Bloc<PlaylistEvent, PlaylistState> {
   final PlaylistRepository _repo;
   final DownloadCubit _downloadCubit;
+  final SettingsCubit _settingsCubit;
   final String playlistId;
 
   PlaylistBloc({
     required PlaylistRepository repo,
     required DownloadCubit downloadCubit,
+    required SettingsCubit settingsCubit,
     required this.playlistId,
   }) : _repo = repo,
        _downloadCubit = downloadCubit,
+       _settingsCubit = settingsCubit,
        super(const PlaylistState.loading()) {
     on<_Load>(_onLoad);
     on<_RemoveSong>(_onRemoveSongFromPlaylist);
@@ -133,7 +138,9 @@ class PlaylistBloc extends Bloc<PlaylistEvent, PlaylistState> {
         event.song,
       );
 
-      if (song != null && song.fileId != null) {
+      final mode = _settingsCubit.state.downloadMode;
+
+      if (song != null && song.fileId != null && mode == DownloadMode.downloadAll) {
         _downloadCubit.downloadSong(song);
       }
     } catch (e) {

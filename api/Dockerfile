@@ -47,7 +47,7 @@ CMD ["distributor"]
 
 # -- Stage 4: Development (Hot Reload) --
 FROM golang:1.25-alpine AS dev
-WORKDIR /app
+WORKDIR /app/api
 RUN apk add --no-cache git build-base
 RUN --mount=type=cache,target=/go/pkg/mod go install github.com/air-verse/air@latest
 RUN --mount=type=cache,target=/go/pkg/mod go install github.com/go-delve/delve/cmd/dlv@latest

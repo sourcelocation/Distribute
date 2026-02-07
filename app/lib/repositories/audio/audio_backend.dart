@@ -47,16 +47,16 @@ class AudioBackend {
     }
   }
 
-  Future<void> play(String localPath) async {
+  Future<void> play(String source, {String? format}) async {
     if (_dummySoundEnabled) return;
 
-    if (_preparedJob?.path == localPath && _preparedJob!.isLoaded) {
+    if (_preparedJob?.path == source && _preparedJob!.isLoaded) {
       await stop(disposeSession: false, clearPrepared: false);
       _currentJob = _preparedJob;
       _preparedJob = null;
     } else {
       await stop(disposeSession: false);
-      _currentJob = _PlaybackJob(localPath, _session!, _onJobFinished);
+      _currentJob = _PlaybackJob(source, _session!, _onJobFinished, format);
       await _currentJob!.load();
     }
 
@@ -69,14 +69,14 @@ class AudioBackend {
     }
   }
 
-  Future<void> preload(String localPath) async {
+  Future<void> preload(String source, {String? format}) async {
     if (_dummySoundEnabled) return;
 
-    if (_preparedJob?.path == localPath) return;
+    if (_preparedJob?.path == source) return;
 
     await _preparedJob?.stop();
 
-    final job = _PlaybackJob(localPath, _session!, _onJobFinished);
+    final job = _PlaybackJob(source, _session!, _onJobFinished, format);
     _preparedJob = job;
 
     try {
@@ -189,22 +189,30 @@ class _PlaybackJob {
   final String path;
   final AudioSession session;
   final _JobCallback onFinished;
+  final String? format;
 
   AudioSource? _source;
   SoundHandle? _handle;
   StreamSubscription? _eventSub;
+  StreamSubscription<List<int>>? _streamSub;
+  HttpClient? _httpClient;
+  bool _isStreamSource = false;
 
   bool _isCancelled = false;
   bool _isManualStop = false;
   bool isLoaded = false;
 
-  _PlaybackJob(this.path, this.session, this.onFinished);
+  _PlaybackJob(this.path, this.session, this.onFinished, this.format);
 
   Future<void> load() async {
     if (_isCancelled) return;
 
     try {
-      final source = await SoLoud.instance.loadFile(path);
+      final isRemote =
+          path.startsWith('http://') || path.startsWith('https://');
+      final source = isRemote
+          ? await _loadRemote()
+          : await SoLoud.instance.loadFile(path);
       if (_isCancelled) {
         SoLoud.instance.disposeSource(source);
         return;
@@ -226,6 +234,82 @@ class _PlaybackJob {
     }
   }
 
+  bool _supportsBufferStream(String? fmt) {
+    if (fmt == null) return false;
+    switch (fmt.toLowerCase()) {
+      case 'mp3':
+      case 'ogg':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  Future<AudioSource> _loadRemote() async {
+    if (_supportsBufferStream(format)) {
+      _isStreamSource = true;
+      final source = SoLoud.instance.setBufferStream(
+        maxBufferSizeDuration: const Duration(hours: 4),
+        bufferingType: BufferingType.preserved,
+        bufferingTimeNeeds: 1.0,
+        format: BufferType.auto,
+      );
+      await _startHttpStream(source);
+      return source;
+    }
+    return SoLoud.instance.loadUrl(path);
+  }
+
+  Future<void> _startHttpStream(AudioSource source) async {
+    _httpClient = HttpClient();
+    final request = await _httpClient!.getUrl(Uri.parse(path));
+    final response = await request.close();
+    if (_isCancelled) return;
+    if (response.statusCode != 200 && response.statusCode != 206) {
+      throw Exception(
+        'Stream request failed with status ${response.statusCode}',
+      );
+    }
+
+    _streamSub = response.listen(
+      (data) {
+        if (_isCancelled) return;
+        _streamSub?.pause();
+        _pushChunk(source, Uint8List.fromList(data)).whenComplete(() {
+          if (!_isCancelled) {
+            _streamSub?.resume();
+          }
+        });
+      },
+      onDone: () {
+        if (!_isCancelled) {
+          try {
+            SoLoud.instance.setDataIsEnded(source);
+          } catch (_) {}
+        }
+      },
+      onError: (_) {
+        if (!_isCancelled) {
+          try {
+            SoLoud.instance.setDataIsEnded(source);
+          } catch (_) {}
+        }
+      },
+      cancelOnError: true,
+    );
+  }
+
+  Future<void> _pushChunk(AudioSource source, Uint8List chunk) async {
+    while (!_isCancelled) {
+      try {
+        SoLoud.instance.addAudioDataStream(source, chunk);
+        return;
+      } catch (e) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    }
+  }
+
   Future<void> play() async {
     if (_isCancelled || !isLoaded || _source == null) return;
     try {
@@ -243,6 +327,17 @@ class _PlaybackJob {
   Future<void> stop() async {
     _isCancelled = true;
     _isManualStop = true;
+
+    await _streamSub?.cancel();
+    _streamSub = null;
+    _httpClient?.close(force: true);
+    _httpClient = null;
+
+    if (_isStreamSource && _source != null) {
+      try {
+        SoLoud.instance.setDataIsEnded(_source!);
+      } catch (_) {}
+    }
 
     if (_handle != null) {
       SoLoud.instance.stop(_handle!);

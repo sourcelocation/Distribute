@@ -77,6 +77,7 @@ func (h *Handler) Register(public *echo.Group) {
 	songs.GET("/:id/files", h.GetSongFiles)
 	songs.DELETE("/files/:id", h.DeleteSongFile, jwt, AdminMiddleware)
 	songs.GET("/download/:file_id", Handle(h.DownloadFile))
+	songs.GET("/stream/:file_id", Handle(h.StreamFile))
 	songs.POST("/assign-file", h.AssignFileToSong, jwt, AdminMiddleware)
 	songs.POST("/assign-file-by-path", h.AssignFileToSongByPath, jwt, AdminMiddleware)
 	songs.GET("/:id", h.GetSong)

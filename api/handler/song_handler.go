@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -34,6 +36,49 @@ func (h *Handler) DownloadFile(c *middleware.CustomContext) error {
 
 	filePath := file.FilePath()
 	return c.File(filePath)
+}
+
+// StreamFile godoc
+// @Summary Stream song file
+// @Description Streams a stored song file by its file ID. Supports HTTP Range requests.
+// @Tags songs
+// @Produce application/octet-stream
+// @Param file_id path string true "File ID (UUID)"
+// @Success 200 {file} file
+// @Success 206 {file} file
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /songs/stream/{file_id} [get]
+func (h *Handler) StreamFile(c *middleware.CustomContext) error {
+	fileId, err := c.GetUUID("file_id")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Valid file_id is required")
+	}
+
+	file, err := h.song_svc.Store.GetFileByID(fileId)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "File not found")
+	}
+
+	filePath := file.FilePath()
+	fh, err := os.Open(filePath)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "File not found")
+	}
+	defer fh.Close()
+
+	stat, err := fh.Stat()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to stat file")
+	}
+
+	contentType := utils.AudioContentType(file.Format)
+	c.Response().Header().Set(echo.HeaderContentType, contentType)
+	c.Response().Header().Set("Accept-Ranges", "bytes")
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filepath.Base(filePath)))
+
+	http.ServeContent(c.Response().Writer, c.Request(), filePath, stat.ModTime(), fh)
+	return nil
 }
 
 // AssignFileToSong godoc
@@ -233,7 +278,7 @@ func (h *Handler) GetSong(c echo.Context) error {
 // @Tags songs
 // @Produce json
 // @Param id path string true "Song ID (UUID)"
-// @Success 200 {array} model.SongFile
+// @Success 200 {array} SongFile
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /songs/{id}/files [get]

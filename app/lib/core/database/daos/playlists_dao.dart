@@ -238,10 +238,17 @@ class PlaylistsDao extends DatabaseAccessor<AppDatabase>
     String songId,
     String fileId,
     String format,
+    int? durationMs,
   ) async {
     await transaction(() async {
       await (update(songs)..where((t) => t.id.equals(songId))).write(
-        SongsCompanion(fileId: Value(fileId), format: Value(format)),
+        SongsCompanion(
+          fileId: Value(fileId),
+          format: Value(format),
+          durationSeconds: durationMs != null
+              ? Value((durationMs / 1000).round())
+              : const Value.absent(),
+        ),
       );
     });
   }

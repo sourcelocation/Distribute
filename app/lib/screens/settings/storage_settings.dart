@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:distributeapp/blocs/storage/storage_cubit.dart';
 import 'package:distributeapp/core/preferences/settings_cubit.dart';
 import 'package:distributeapp/core/preferences/settings_state.dart';
+import 'package:distributeapp/core/preferences/download_mode.dart';
 import 'package:distributeapp/components/blurry_app_bar.dart';
 import 'package:distributeapp/core/service_locator.dart';
 import 'package:distributeapp/theme/app_icons.dart';
@@ -174,6 +175,8 @@ class _StorageSettingsViewState extends State<_StorageSettingsView> {
                 children: [
                   _buildUsageCard(theme),
                   const SizedBox(height: 24),
+                  _buildDownloadModeCard(theme, context),
+                  const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: Text(
@@ -188,6 +191,60 @@ class _StorageSettingsViewState extends State<_StorageSettingsView> {
                 ],
               ),
       ),
+    );
+  }
+
+  Widget _buildDownloadModeCard(ThemeData theme, BuildContext context) {
+    return BlocBuilder<SettingsCubit, SettingsState>(
+      builder: (context, settingsState) {
+        final mode = settingsState.downloadMode;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: theme.colorScheme.outline),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Download Behavior",
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              RadioListTile<DownloadMode>(
+                value: DownloadMode.downloadAll,
+                groupValue: mode,
+                title: const Text("Download All"),
+                subtitle: const Text(
+                  "Auto-download songs when you add them to your library.",
+                ),
+                onChanged: (value) {
+                  if (value != null) {
+                    context.read<SettingsCubit>().setDownloadMode(value);
+                  }
+                },
+              ),
+              RadioListTile<DownloadMode>(
+                value: DownloadMode.streamOnly,
+                groupValue: mode,
+                title: const Text("Stream Only"),
+                subtitle: const Text(
+                  "Play instantly without auto-downloading. Manual downloads still work.",
+                ),
+                onChanged: (value) {
+                  if (value != null) {
+                    context.read<SettingsCubit>().setDownloadMode(value);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

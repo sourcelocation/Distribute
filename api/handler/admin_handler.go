@@ -7,7 +7,7 @@ import (
 
 // RunDoctor godoc
 // @Summary Run maintenance tasks
-// @Description Runs server-side maintenance (ensures song file durations). Requires an admin JWT.
+// @Description Runs server-side maintenance (ensures song file durations and sizes). Requires an admin JWT.
 // @Tags admin
 // @Security BearerAuth
 // @Success 200 {string} string "OK"
@@ -16,6 +16,7 @@ import (
 // @Router /doctor [post]
 func (h *Handler) RunDoctor(c echo.Context) error {
 	task.EnsureFilesDuration(h.db, *h.song_svc)
+	task.EnsureFilesSize(h.db)
 	return c.NoContent(200)
 }
 

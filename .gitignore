@@ -57,6 +57,7 @@ dist/
 **/vendor/
 **/cache/
 api/data/
+api/storage/
 api/tmp/
 admin/.dart_tool/
 admin/build/

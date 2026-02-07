@@ -6,9 +6,9 @@ import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/screens/error_message.dart';
 import 'package:distributeapp/screens/library/album_image.dart';
 import 'package:distributeapp/repositories/audio/music_player_controller.dart';
-import 'package:distributeapp/repositories/playlist_repository.dart';
 import 'package:distributeapp/model/available_file.dart';
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
+import 'package:distributeapp/core/preferences/settings_cubit.dart';
 import 'package:distributeapp/screens/playlist/playlist_options.dart';
 import 'package:distributeapp/theme/app_icons.dart';
 import 'package:flutter/material.dart';
@@ -333,6 +333,22 @@ class _SongTile extends StatefulWidget {
 }
 
 class _SongTileState extends State<_SongTile> {
+  bool _hasLocalFile = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshLocalAvailability();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SongTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.song != widget.song) {
+      _refreshLocalAvailability();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -361,28 +377,57 @@ class _SongTileState extends State<_SongTile> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            BlocBuilder<DownloadCubit, DownloadState>(
+            BlocConsumer<DownloadCubit, DownloadState>(
               buildWhen: (previous, current) {
                 final prevStatus = previous.queue[widget.song.id];
                 final currStatus = current.queue[widget.song.id];
                 return prevStatus != currStatus;
+              },
+              listenWhen: (previous, current) {
+                final prevStatus = previous.queue[widget.song.id];
+                final currStatus = current.queue[widget.song.id];
+                return prevStatus != currStatus;
+              },
+              listener: (context, state) {
+                final downloadStatus =
+                    state.queue[widget.song.id] ??
+                    const DownloadStatus.initial();
+                downloadStatus.when(
+                  initial: _refreshLocalAvailability,
+                  pending: () {},
+                  loading: (_) {},
+                  success: _refreshLocalAvailability,
+                  error: (_) => _refreshLocalAvailability(),
+                );
               },
               builder: (context, state) {
                 final downloadStatus =
                     state.queue[widget.song.id] ??
                     const DownloadStatus.initial();
 
+                const iconSize = 20.0;
+                final successIcon = Icon(
+                  AppIcons.downloaded,
+                  color: theme.colorScheme.secondary,
+                  size: iconSize,
+                );
+                final downloadingIcon = SizedBox(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+                final errorIcon = Icon(
+                  AppIcons.error,
+                  color: theme.colorScheme.error,
+                  size: iconSize,
+                );
+                final shouldShowDownloadedIcon = downloadStatus.maybeWhen(
+                  success: () => true,
+                  orElse: () => _hasLocalFile,
+                );
                 return downloadStatus.when(
-                  initial: () => widget.song.isDownloaded
-                      ? Icon(AppIcons.check, color: theme.colorScheme.secondary)
-                      : Icon(
-                          AppIcons.cloud,
-                          color: theme.colorScheme.secondary,
-                        ),
-                  pending: () => Icon(
-                    AppIcons.downloading,
-                    color: theme.colorScheme.secondary,
-                  ),
+                  initial: () => shouldShowDownloadedIcon
+                      ? successIcon
+                      : const SizedBox.shrink(),
+                  pending: () => downloadingIcon,
                   loading: (progress) => SizedBox(
                     height: 24,
                     width: 24,
@@ -391,10 +436,8 @@ class _SongTileState extends State<_SongTile> {
                       value: progress,
                     ),
                   ),
-                  success: () =>
-                      Icon(AppIcons.check, color: theme.colorScheme.secondary),
-                  error: (message) =>
-                      Icon(AppIcons.error, color: theme.colorScheme.error),
+                  success: () => successIcon,
+                  error: (message) => errorIcon,
                 );
               },
             ),
@@ -478,33 +521,30 @@ class _SongTileState extends State<_SongTile> {
 
   void _onTap() async {
     final controller = sl<MusicPlayerController>();
-    final fileExists = await controller.isSongAvailable(widget.song);
-
-    if (fileExists && mounted) {
-      widget.onPlay();
-      return;
-    }
-
-    if (!mounted) return;
-
     try {
-      final repo = sl<PlaylistRepository>();
-      final files = await repo.fetchSongFiles(widget.song.id);
+      final settings = context.read<SettingsCubit>().state;
+      final decision = await controller.decideSongTap(
+        widget.song,
+        settings.downloadMode,
+      );
 
       if (!mounted) return;
 
-      if (files.isEmpty) {
-        repo.updateSongDownloaded(widget.song.id, false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No files available for download.")),
-        );
-        return;
-      }
-
-      if (files.length == 1) {
-        _startDownload(files.first);
-      } else {
-        _showFileSelection(context, widget.song, files);
+      switch (decision) {
+        case SongTapDecisionPlayNow():
+          widget.onPlay();
+          break;
+        case SongTapDecisionDownloadFile(:final file):
+          _startDownload(file);
+          break;
+        case SongTapDecisionSelectFile(:final files):
+          _showFileSelection(context, widget.song, files);
+          break;
+        case SongTapDecisionNoFiles():
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No files available for download.")),
+          );
+          break;
       }
     } catch (e) {
       if (mounted) {
@@ -515,22 +555,25 @@ class _SongTileState extends State<_SongTile> {
     }
   }
 
+  Future<void> _refreshLocalAvailability() async {
+    final currentSongId = widget.song.id;
+    final controller = sl<MusicPlayerController>();
+    final available = await controller.isSongAvailable(widget.song);
+
+    if (!mounted || widget.song.id != currentSongId) return;
+    if (_hasLocalFile == available) return;
+
+    setState(() {
+      _hasLocalFile = available;
+    });
+  }
+
   void _startDownload(AvailableFile file) async {
     try {
-      await sl<PlaylistRepository>().updateSongFile(
-        widget.song.id,
-        file.id,
-        file.format,
+      await context.read<DownloadCubit>().downloadSongWithFileSelection(
+        widget.song,
+        file,
       );
-
-      if (!mounted) return;
-
-      final updatedSong = widget.song.copyWith(
-        fileId: file.id,
-        format: file.format,
-      );
-
-      context.read<DownloadCubit>().downloadSong(updatedSong);
 
       // ScaffoldMessenger.of(
       //   context,

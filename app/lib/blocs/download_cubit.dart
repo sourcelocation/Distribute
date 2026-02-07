@@ -1,3 +1,4 @@
+import 'package:distributeapp/model/available_file.dart';
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/repositories/download/song_download_service.dart';
 import 'package:distributeapp/repositories/playlist_repository.dart';
@@ -60,27 +61,41 @@ class DownloadCubit extends Cubit<DownloadState> {
       } else {
         // Fetch available files and pick the first one
         try {
-          final files = await _playlistRepository.fetchSongFiles(song.id);
-          if (files.isNotEmpty) {
-            final file = files.first;
-            await _playlistRepository.updateSongFile(
-              song.id,
-              file.id,
-              file.format,
-            );
+          final file = await _playlistRepository.resolveFirstAvailableFile(
+            song.id,
+          );
+          if (file == null) continue;
 
-            final updatedSong = song.copyWith(
-              fileId: file.id,
-              format: file.format,
-            );
-            downloadSong(updatedSong);
-          }
+          final updatedSong = song.copyWith(
+            fileId: file.id,
+            format: file.format,
+          );
+          downloadSong(updatedSong);
         } catch (e) {
           // Skip if we can't fetch files
           continue;
         }
       }
     }
+  }
+
+  Future<void> downloadSongWithFileSelection(
+    Song song,
+    AvailableFile file,
+  ) async {
+    await _playlistRepository.updateSongFile(
+      song.id,
+      file.id,
+      file.format,
+      file.durationMs,
+    );
+
+    final updatedSong = song.copyWith(
+      fileId: file.id,
+      format: file.format,
+    );
+
+    downloadSong(updatedSong);
   }
 
   Future<void> removeDownloadsFromPlaylist(List<Song> songs) async {

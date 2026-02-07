@@ -190,6 +190,9 @@ func (s *SongService) AssignFileToSong(songID uuid.UUID, format string, data io.
 		return nil, fmt.Errorf("failed to probe song file duration: %v", err)
 	}
 	sf.Duration = uint(duration * 1000)
+	if info, err := os.Stat(sf.FilePath()); err == nil {
+		sf.Size = info.Size()
+	}
 
 	if err := s.Store.CreateSongFile(&sf); err != nil {
 		return nil, fmt.Errorf("failed to create song file record")
@@ -232,6 +235,9 @@ func (s *SongService) AssignFileToSongByPath(songID uuid.UUID, sourcePath string
 		return nil, fmt.Errorf("failed to probe song file duration: %v", err)
 	}
 	sf.Duration = uint(duration * 1000)
+	if info, err := os.Stat(destPath); err == nil {
+		sf.Size = info.Size()
+	}
 
 	if err := s.Store.CreateSongFile(&sf); err != nil {
 		return nil, fmt.Errorf("failed to create song file record")

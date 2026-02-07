@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CornerBrackets, GlowBorders } from '../components/FUI';
-import { Shield, Key, Server, Save, LogOut, Trash2, Database, RefreshCw } from 'lucide-react';
+import { Shield, Key, Server, Save, LogOut, Trash2, Database, RefreshCw, Wrench } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import Alert from '../components/Alert';
@@ -27,6 +27,7 @@ const SettingsView = () => {
     // Maintenance State
     const [cleanupLoading, setCleanupLoading] = useState(false);
     const [reindexLoading, setReindexLoading] = useState(false);
+    const [doctorLoading, setDoctorLoading] = useState(false);
 
     // General State
     const [generalSettings, setGeneralSettings] = useState({
@@ -122,6 +123,22 @@ const SettingsView = () => {
             setMsgType('error');
         } finally {
             setReindexLoading(false);
+        }
+    };
+
+    const handleDoctor = async () => {
+        setDoctorLoading(true);
+        setMsg('');
+        try {
+            await api.post('/doctor');
+            setMsg('SUCCESS: MAINTENANCE TASKS COMPLETE');
+            setMsgType('primary');
+        } catch (e) {
+            console.error(e);
+            setMsg('ERROR: ' + (e.response?.data?.error || e.message));
+            setMsgType('error');
+        } finally {
+            setDoctorLoading(false);
         }
     };
 
@@ -296,6 +313,22 @@ const SettingsView = () => {
                                 className="bg-primary/10 border border-primary/30 text-primary px-6 py-3 font-bold text-xs hover:bg-primary hover:text-black transition-colors flex items-center gap-2 cursor-pointer"
                             >
                                 <RefreshCw className={`w-4 h-4 ${reindexLoading ? 'animate-spin' : ''}`} /> {reindexLoading ? 'REINDEXING...' : 'REINDEX ALL'}
+                            </button>
+                        </div>
+
+                        <div className="p-4 border border-white/5 bg-black/40">
+                            <h4 className="text-white text-xs font-bold mb-2">FILE METADATA BACKFILL</h4>
+                            <p className="text-[10px] text-white/40 font-mono mb-4">
+                                Backfill missing song file duration and size metadata.
+                                Safe to run after server upgrades.
+                            </p>
+
+                            <button
+                                onClick={handleDoctor}
+                                disabled={doctorLoading}
+                                className="bg-white/5 border border-white/20 text-white/80 px-6 py-3 font-bold text-xs hover:bg-white hover:text-black transition-colors flex items-center gap-2 cursor-pointer"
+                            >
+                                <Wrench className={`w-4 h-4 ${doctorLoading ? 'animate-spin' : ''}`} /> {doctorLoading ? 'RUNNING...' : 'RUN BACKFILL'}
                             </button>
                         </div>
                     </div>

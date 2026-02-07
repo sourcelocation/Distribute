@@ -16,6 +16,7 @@ type SongFile struct {
 	SongID   uuid.UUID `gorm:"type:uuid"`
 	Format   string
 	Duration uint
+	Size     int64
 }
 
 func (s *SongFile) BeforeCreate(tx *gorm.DB) (err error) {

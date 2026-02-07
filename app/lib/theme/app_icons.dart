@@ -42,6 +42,8 @@ class AppIcons {
       isCupertino ? CupertinoIcons.person_crop_circle : Icons.account_circle;
   static IconData get check =>
       isCupertino ? CupertinoIcons.check_mark : Icons.check;
+  static IconData get downloaded =>
+      isCupertino ? CupertinoIcons.arrow_down_circle_fill : Icons.download_done;
   static IconData get checkCircle => isCupertino
       ? CupertinoIcons.check_mark_circled
       : Icons.check_circle_outline;

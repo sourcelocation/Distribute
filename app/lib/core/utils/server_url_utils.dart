@@ -1,17 +1,22 @@
 class ServerUrlUtils {
   static String normalizeUrl(String input) {
-    if (input.isEmpty) return input;
-    if (input.contains('://')) return input;
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    if (trimmed.toLowerCase() == 'dev') {
+      return 'http://localhost:8585';
+    }
+    if (trimmed.contains('://')) return trimmed;
 
     // Default to HTTP for local addresses, HTTPS for everything else
-    final uri = Uri.tryParse('http://$input');
-    if (uri == null) return 'https://$input';
+    final uri = Uri.tryParse('http://$trimmed');
+    if (uri == null) return 'https://$trimmed';
 
     final host = uri.host;
 
     // Check for localhost or .local (mDNS)
     if (host == 'localhost' || host.endsWith('.local')) {
-      return 'http://$input';
+      return 'http://$trimmed';
     }
 
     // Check for private IPv4 ranges
@@ -21,15 +26,15 @@ class ServerUrlUtils {
       final p1 = int.tryParse(parts[1]);
 
       if (p0 != null) {
-        if (p0 == 127) return 'http://$input';
-        if (p0 == 10) return 'http://$input';
-        if (p0 == 192 && p1 == 168) return 'http://$input';
+        if (p0 == 127) return 'http://$trimmed';
+        if (p0 == 10) return 'http://$trimmed';
+        if (p0 == 192 && p1 == 168) return 'http://$trimmed';
         if (p0 == 172 && p1 != null && p1 >= 16 && p1 <= 31) {
-          return 'http://$input';
+          return 'http://$trimmed';
         }
       }
     }
 
-    return 'https://$input';
+    return 'https://$trimmed';
   }
 }

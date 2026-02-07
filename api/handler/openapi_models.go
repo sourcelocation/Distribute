@@ -22,6 +22,7 @@ type SongFile struct {
 	CreatedAt time.Time `json:"created_at"`
 	Format    string    `json:"format"`
 	Duration  uint      `json:"duration"`
+	Size      int64     `json:"size"`
 }
 
 type User struct {
@@ -115,6 +116,7 @@ func FromSongFileModels(ms []model.SongFile) []SongFile {
 			CreatedAt: m.CreatedAt,
 			Format:    m.Format,
 			Duration:  m.Duration,
+			Size:      m.Size,
 		}
 	}
 	return files

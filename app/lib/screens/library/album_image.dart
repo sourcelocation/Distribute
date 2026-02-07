@@ -4,7 +4,7 @@ import 'package:distributeapp/core/artwork/artwork_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class LibraryLeadingIcon extends StatelessWidget {
+class LibraryLeadingIcon extends StatefulWidget {
   const LibraryLeadingIcon({
     super.key,
     required this.albumId,
@@ -15,28 +15,58 @@ class LibraryLeadingIcon extends StatelessWidget {
   final bool isFolder;
 
   @override
-  Widget build(BuildContext context) {
+  State<LibraryLeadingIcon> createState() => _LibraryLeadingIconState();
+}
+
+class _LibraryLeadingIconState extends State<LibraryLeadingIcon> {
+  late final ArtworkCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
     final repository = context.read<ArtworkRepository>();
-    final cubit = ArtworkCubit(repository);
+    _cubit = ArtworkCubit(repository);
+    _loadIfNeeded(widget.albumId);
+  }
 
-    if (albumId != null) {
-      cubit.loadImage(albumId!, ArtQuality.lq);
+  @override
+  void didUpdateWidget(covariant LibraryLeadingIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.albumId != widget.albumId) {
+      _loadIfNeeded(widget.albumId);
     }
+  }
 
-    return BlocProvider(
-      create: (context) => cubit,
+  @override
+  void dispose() {
+    _cubit.close();
+    super.dispose();
+  }
+
+  void _loadIfNeeded(String? albumId) {
+    if (albumId != null) {
+      _cubit.loadImage(albumId, ArtQuality.lq);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider.value(
+      value: _cubit,
       child: BlocBuilder<ArtworkCubit, ArtworkState>(
         builder: (context, state) {
           return ClipRRect(
-            borderRadius: BorderRadius.circular(albumId != null ? 8.0 : 0.0),
-            child: albumId != null
+            borderRadius: BorderRadius.circular(
+              widget.albumId != null ? 8.0 : 0.0,
+            ),
+            child: widget.albumId != null
                 ? switch (state) {
                     ArtworkLoading() || ArtworkInitial() => Image.asset(
-                      isFolder
+                      widget.isFolder
                           ? 'assets/default-folder-lq.png'
                           : 'assets/default-playlist-lq.png',
                       key: ValueKey(
-                        isFolder ? 'default-folder' : 'default-playlist',
+                        widget.isFolder ? 'default-folder' : 'default-playlist',
                       ),
                       width: 48,
                       height: 48,
@@ -44,17 +74,17 @@ class LibraryLeadingIcon extends StatelessWidget {
                     ),
                     ArtworkVisible(image: final image) => Image.file(
                       image,
-                      key: ValueKey('artwork-$albumId'),
+                      key: ValueKey('artwork-${widget.albumId}'),
                       width: 48,
                       height: 48,
                       fit: BoxFit.cover,
                     ),
                     ArtworkError() => Image.asset(
-                      isFolder
+                      widget.isFolder
                           ? 'assets/default-folder-lq.png'
                           : 'assets/default-playlist-lq.png',
                       key: ValueKey(
-                        isFolder ? 'default-folder' : 'default-playlist',
+                        widget.isFolder ? 'default-folder' : 'default-playlist',
                       ),
                       width: 48,
                       height: 48,
@@ -62,11 +92,11 @@ class LibraryLeadingIcon extends StatelessWidget {
                     ),
                   }
                 : Image.asset(
-                    isFolder
+                    widget.isFolder
                         ? 'assets/default-folder-lq.png'
                         : 'assets/default-playlist-lq.png',
                     key: ValueKey(
-                      isFolder ? 'default-folder' : 'default-playlist',
+                      widget.isFolder ? 'default-folder' : 'default-playlist',
                     ),
                     width: 48,
                     height: 48,

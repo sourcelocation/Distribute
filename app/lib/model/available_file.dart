@@ -10,6 +10,7 @@ abstract class AvailableFile with _$AvailableFile {
     @JsonKey(name: 'format') required String format,
     @JsonKey(name: 'bitrate', defaultValue: 0) required int bitrate,
     @JsonKey(name: 'size', defaultValue: 0) required int size,
+    @JsonKey(name: 'duration', defaultValue: 0) required int durationMs,
   }) = _AvailableFile;
 
   factory AvailableFile.fromJson(Map<String, dynamic> json) =>

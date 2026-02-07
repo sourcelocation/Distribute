@@ -127,12 +127,27 @@ class PlaylistRepository {
     return _songsApi.getAvailableFiles(songId);
   }
 
+  Future<AvailableFile?> resolveFirstAvailableFile(
+    String songId, {
+    bool persistSelection = true,
+  }) async {
+    final files = await _songsApi.getAvailableFiles(songId);
+    if (files.isEmpty) return null;
+
+    final file = files.first;
+    if (persistSelection) {
+      await _dao.updateSongFile(songId, file.id, file.format, file.durationMs);
+    }
+    return file;
+  }
+
   Future<void> updateSongFile(
     String songId,
     String fileId,
     String format,
+    int? durationMs,
   ) async {
-    await _dao.updateSongFile(songId, fileId, format);
+    await _dao.updateSongFile(songId, fileId, format, durationMs);
   }
 
   Future<void> moveFolder(String itemId, String? folderId) async {

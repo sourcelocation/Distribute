@@ -6,7 +6,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/api/download_api.dart';
 import 'package:distributeapp/core/artwork/artwork_repository.dart';
+import 'package:distributeapp/core/preferences/download_mode.dart';
 import 'package:distributeapp/core/preferences/settings_repository.dart';
+import 'package:distributeapp/model/available_file.dart';
 import 'package:distributeapp/repositories/playlist_repository.dart';
 
 import 'audio_backend.dart';
@@ -68,6 +70,54 @@ class MusicPlayerController {
   Future<bool> isSongAvailable(Song song) async {
     final localPath = song.localPath(rootPath);
     return await File(localPath).exists();
+  }
+
+  Future<SongTapDecision> decideSongTap(
+    Song song,
+    DownloadMode mode,
+  ) async {
+    if (await isSongAvailable(song)) {
+      return const SongTapDecision.playNow();
+    }
+
+    if (mode == DownloadMode.streamOnly) {
+      return const SongTapDecision.playNow();
+    }
+
+    final files = await playlistRepository.fetchSongFiles(song.id);
+    if (files.isEmpty) {
+      await playlistRepository.updateSongDownloaded(song.id, false);
+      return const SongTapDecision.noFiles();
+    }
+
+    if (files.length == 1) {
+      return SongTapDecision.downloadFile(files.first);
+    }
+
+    return SongTapDecision.selectFile(files);
+  }
+
+  Future<_PlaybackSource?> _resolvePlaybackSource(Song song) async {
+    final localPath = song.localPath(rootPath);
+    if (await File(localPath).exists()) {
+      return _PlaybackSource.local(localPath);
+    }
+
+    var fileId = song.fileId;
+    AvailableFile? resolvedFile;
+    if (fileId == null) {
+      resolvedFile = await playlistRepository.resolveFirstAvailableFile(
+        song.id,
+        persistSelection: true,
+      );
+      if (resolvedFile == null) return null;
+      fileId = resolvedFile.id;
+    }
+
+    return _PlaybackSource.remote(
+      downloadApi.getStreamUrl(fileId),
+      format: song.format ?? resolvedFile?.format,
+    );
   }
 
   List<Song>? _lastProcessedQueue;
@@ -132,9 +182,6 @@ class MusicPlayerController {
   // --- Playback Actions ---
 
   Future<void> playSong(Song song) async {
-    final isAvailable = await isSongAvailable(song);
-    if (!isAvailable) return;
-
     // Setting queue sets index=0
     _queueManager.setQueue([song]);
     // _onQueueStateChanged will trigger playback
@@ -342,13 +389,11 @@ class MusicPlayerController {
   }
 
   Future<void> _playEntry(Song song) async {
-    final isAvailable = await isSongAvailable(song);
-    if (!isAvailable) {
+    final source = await _resolvePlaybackSource(song);
+    if (source == null) {
       _emitState(_state.copyWith(processingState: AudioProcessingState.error));
       return;
     }
-
-    final localPath = song.localPath(rootPath);
 
     // 2. Emit loading state immediately to update UI
     // We construct a basic media item first to update UI instantly.
@@ -365,13 +410,13 @@ class MusicPlayerController {
     );
 
     try {
-      await _audioBackend.play(localPath);
+      await _audioBackend.play(source.path, format: source.format);
 
       _loadArtworkForSong(song);
 
       final mediaItem = await _createMediaItem(
         song,
-        localPath: localPath,
+        localPath: source.isLocal ? source.path : null,
         loadArtwork: true,
       );
 
@@ -427,10 +472,11 @@ class MusicPlayerController {
     if (index != null) {
       final song = _queueManager.state.queue[index];
 
-      if (await isSongAvailable(song) &&
-          isNext &&
-          settingsRepository.preloadNextSongEnabled) {
-        await _audioBackend.preload(song.localPath(rootPath));
+      if (isNext && settingsRepository.preloadNextSongEnabled) {
+        final source = await _resolvePlaybackSource(song);
+        if (source != null && source.isLocal) {
+        await _audioBackend.preload(source.path, format: source.format);
+      }
       }
 
       try {
@@ -541,4 +587,27 @@ class MusicPlayerController {
     _state = next;
     _stateController.add(_state);
   }
+}
+
+class _PlaybackSource {
+  final String path;
+  final bool isLocal;
+  final String? format;
+
+  const _PlaybackSource._(this.path, this.isLocal, this.format);
+
+  factory _PlaybackSource.local(String path) =>
+      _PlaybackSource._(path, true, null);
+  factory _PlaybackSource.remote(String url, {String? format}) =>
+      _PlaybackSource._(url, false, format);
+}
+
+@freezed
+abstract class SongTapDecision with _$SongTapDecision {
+  const factory SongTapDecision.playNow() = SongTapDecisionPlayNow;
+  const factory SongTapDecision.downloadFile(AvailableFile file) =
+      SongTapDecisionDownloadFile;
+  const factory SongTapDecision.selectFile(List<AvailableFile> files) =
+      SongTapDecisionSelectFile;
+  const factory SongTapDecision.noFiles() = SongTapDecisionNoFiles;
 }

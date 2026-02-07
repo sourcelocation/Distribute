@@ -27,7 +27,12 @@ class PlaylistHelper {
 
     final bestFile = files.first;
 
-    await repo.updateSongFile(song.id, bestFile.id, bestFile.format);
+    await repo.updateSongFile(
+      song.id,
+      bestFile.id,
+      bestFile.format,
+      bestFile.durationMs,
+    );
 
     return Song(
       id: song.id,

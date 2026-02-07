@@ -36,5 +36,5 @@ Decentralized music platform with an offline-first Flutter client and a Go backe
 - **Validation**: `go-playground/validator`.
 
 ## Testing
-- **Client**: Since you may be running in a git worktree, `flutter pub get` and `dart run build_runner build --delete-conflicting-outputs` will fail. Ignore dependency and @freezed errors, but fix any other errors.
+- **Client**: `flutter analyse` and `dart run build_runner build --delete-conflicting-outputs`.
 - **Server**: No tests. Don't restart the server after changes.

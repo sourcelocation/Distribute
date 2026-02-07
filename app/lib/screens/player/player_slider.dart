@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:distributeapp/blocs/music/music_player_bloc.dart';
 import 'package:distributeapp/blocs/music/position_cubit.dart';
 import 'package:flutter/material.dart';
@@ -57,7 +59,7 @@ class MusicPlayerSliderState extends State<MusicPlayerSlider> {
                 ),
                 child: Slider(
                   min: 0.0,
-                  max: totalDuration.inSeconds.toDouble(),
+                  max: max(totalDuration.inSeconds.toDouble(), displayPosition),
                   value: displayPosition,
                   onChanged: (value) {
                     setState(() {

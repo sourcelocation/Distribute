@@ -12,7 +12,7 @@ This is a admin panel for a music streaming service. Gets combined with the dist
 - Tailwind CSS
 - Vite
 
-**Design** Follows minimal FUI, a fictional design system. (ONLY for admin/, not the app/)
+**Design** Follows minimal FUI, a fictional design system. (This applies ONLY to admin/. Do NOT follow FUI for any other part of the project.)
 
 **Development**
 - `npm run dev` is currently running on port 5173.
