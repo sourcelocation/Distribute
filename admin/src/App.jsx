@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
-import api from './api';
+import api, { buildApiUrl } from './api';
 import { StatsProvider } from './StatsContext';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -92,7 +92,7 @@ const MainLayout = () => {
                         <div className="w-10 h-10 bg-white/5 rounded overflow-hidden">
                           {row.album?.id && (
                             <img
-                              src={`/api/images/covers/${row.album.id}/lq`}
+                              src={buildApiUrl(`/images/covers/${row.album.id}/lq`)}
                               alt={row.album?.title || 'Album Cover'}
                               className="w-full h-full object-cover"
                               onError={(e) => { e.target.style.display = 'none'; }}
@@ -129,7 +129,7 @@ const MainLayout = () => {
                       render: (row) => (
                         <div className="w-10 h-10 bg-white/5 rounded overflow-hidden">
                           <img
-                            src={`/api/images/covers/${row.id}/lq`}
+                            src={buildApiUrl(`/images/covers/${row.id}/lq`)}
                             alt={row.title}
                             className="w-full h-full object-cover"
                             onError={(e) => { e.target.style.display = 'none'; }}

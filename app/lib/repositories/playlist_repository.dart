@@ -5,6 +5,7 @@ import 'package:distributeapp/model/server_search_result.dart';
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/model/available_file.dart';
 import 'package:distributeapp/api/songs_api.dart';
+import 'package:distributeapp/core/preferences/audio_quality.dart';
 
 import '../core/database/daos/playlists_dao.dart';
 import 'package:uuid/uuid.dart';
@@ -97,6 +98,10 @@ class PlaylistRepository {
     await _dao.updateSongDownloaded(songId, downloaded);
   }
 
+  Future<int?> getSongDurationSeconds(String songId) {
+    return _dao.getSongDurationSeconds(songId);
+  }
+
   Future<void> createPlaylist(String name, String? folderId) async {
     final newPlaylist = PlaylistEntity(
       id: const Uuid().v4(),
@@ -129,16 +134,54 @@ class PlaylistRepository {
 
   Future<AvailableFile?> resolveFirstAvailableFile(
     String songId, {
+    required AudioQualityOption preference,
     bool persistSelection = true,
   }) async {
     final files = await _songsApi.getAvailableFiles(songId);
     if (files.isEmpty) return null;
 
-    final file = files.first;
-    if (persistSelection) {
+    final file = _selectPreferredFile(files, preference);
+    if (file != null && persistSelection) {
       await _dao.updateSongFile(songId, file.id, file.format, file.durationMs);
     }
     return file;
+  }
+
+  AvailableFile? _selectPreferredFile(
+    List<AvailableFile> files,
+    AudioQualityOption preference,
+  ) {
+    if (files.isEmpty) return null;
+
+    final scored = files
+        .map((file) => MapEntry(file, _effectiveBitrateKbps(file)))
+        .toList();
+    scored.sort((a, b) => a.value.compareTo(b.value));
+
+    if (preference.isLossless) {
+      return scored.last.key;
+    }
+
+    final target = preference.bitrateKbps;
+    final below = scored.where((entry) => entry.value > 0 && entry.value <= target).toList();
+    if (below.isNotEmpty) {
+      return below.last.key;
+    }
+
+    final above = scored.where((entry) => entry.value > 0).toList();
+    if (above.isNotEmpty) {
+      return above.first.key;
+    }
+
+    return scored.last.key;
+  }
+
+  int _effectiveBitrateKbps(AvailableFile file) {
+    if (file.bitrate > 0) return file.bitrate;
+    if (file.durationMs <= 0 || file.size <= 0) return 0;
+    final seconds = file.durationMs / 1000;
+    if (seconds <= 0) return 0;
+    return (file.size * 8 ~/ 1000) ~/ seconds;
   }
 
   Future<void> updateSongFile(

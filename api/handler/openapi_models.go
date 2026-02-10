@@ -21,6 +21,9 @@ type SongFile struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	Format    string    `json:"format"`
+	Codec     string    `json:"codec"`
+	Variant   string    `json:"variant"`
+	Bitrate   int       `json:"bitrate"`
 	Duration  uint      `json:"duration"`
 	Size      int64     `json:"size"`
 }
@@ -115,6 +118,9 @@ func FromSongFileModels(ms []model.SongFile) []SongFile {
 			ID:        m.ID,
 			CreatedAt: m.CreatedAt,
 			Format:    m.Format,
+			Codec:     m.Codec,
+			Variant:   m.Variant,
+			Bitrate:   m.Bitrate,
 			Duration:  m.Duration,
 			Size:      m.Size,
 		}
@@ -235,9 +241,10 @@ type MessageResponse struct {
 type HealthResponse string
 
 type ServerInfoResponse struct {
-	Version                 string   `json:"version" example:"s0.0.4"`
-	RequestMailAnnouncement string   `json:"request_mail_announcement" example:"Feel free to request more music!"`
-	RequestMailCategories   []string `json:"request_mail_categories" example:"pop,rock"`
+	Version                 string                     `json:"version" example:"s0.0.4"`
+	RequestMailAnnouncement string                     `json:"request_mail_announcement" example:"Feel free to request more music!"`
+	RequestMailCategories   []string                   `json:"request_mail_categories" example:"pop,rock"`
+	TranscodeQualities      []service.TranscodeQuality `json:"transcode_qualities"`
 }
 
 type GetSongsResponse struct {
@@ -253,8 +260,8 @@ type AssignAlbumCoverResponse struct {
 }
 
 type AssignFileToSongResponse struct {
-	Status string   `json:"status" example:"File assigned to song successfully"`
-	File   SongFile `json:"file"`
+	Status string     `json:"status" example:"File assigned to song successfully"`
+	Files  []SongFile `json:"files,omitempty"`
 }
 
 type PlaylistResponse struct {

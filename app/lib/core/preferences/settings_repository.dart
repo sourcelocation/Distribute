@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:distributeapp/core/preferences/vinyl_style.dart';
+import 'package:distributeapp/core/preferences/audio_quality.dart';
 
 class SettingsRepository {
   final SharedPreferences _prefs;
@@ -17,6 +20,10 @@ class SettingsRepository {
   static const _kOnboardingCompleted = 'onboarding_completed';
   static const _kCustomDownloadPath = 'custom_download_path';
   static const _kDownloadMode = 'download_mode';
+  static const _kStreamingQualityId = 'streaming_quality_id';
+  static const _kDownloadQualityId = 'download_quality_id';
+  static const _kAvailableQualities = 'available_audio_qualities';
+  static const _kPlayerVolume = 'player_volume';
 
   String get serverURL {
     return _prefs.getString(_kServerURL) ?? '';
@@ -103,6 +110,74 @@ class SettingsRepository {
 
   Future<void> setDownloadModeIndex(int index) async {
     await _prefs.setInt(_kDownloadMode, index);
+  }
+
+  String? get streamingQualityId {
+    final stored = _prefs.getString(_kStreamingQualityId);
+    if (stored != null && stored.isNotEmpty) return stored;
+    return null;
+  }
+
+  Future<void> setStreamingQualityId(String id) async {
+    await _prefs.setString(_kStreamingQualityId, id);
+  }
+
+  String? get downloadQualityId {
+    final stored = _prefs.getString(_kDownloadQualityId);
+    if (stored != null && stored.isNotEmpty) return stored;
+    return null;
+  }
+
+  Future<void> setDownloadQualityId(String id) async {
+    await _prefs.setString(_kDownloadQualityId, id);
+  }
+
+  List<AudioQualityOption> get availableQualities {
+    final raw = _prefs.getString(_kAvailableQualities);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final options = decoded
+              .whereType<Map>()
+              .map((item) => AudioQualityOption.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .toList();
+          return AudioQualityCatalog.normalize(options);
+        }
+      } catch (_) {}
+    }
+    return AudioQualityCatalog.defaults;
+  }
+
+  Future<void> setAvailableQualities(List<AudioQualityOption> options) async {
+    final normalized = AudioQualityCatalog.normalize(options);
+    final raw = jsonEncode(
+      normalized.map((option) => option.toJson()).toList(),
+    );
+    await _prefs.setString(_kAvailableQualities, raw);
+  }
+
+  AudioQualityOption get streamingQuality {
+    final options = availableQualities;
+    return AudioQualityCatalog.resolveById(streamingQualityId, options);
+  }
+
+  AudioQualityOption get downloadQuality {
+    final options = availableQualities;
+    return AudioQualityCatalog.resolveById(downloadQualityId, options);
+  }
+
+  double get playerVolume {
+    final value = _prefs.getDouble(_kPlayerVolume);
+    if (value == null) return 1.0;
+    return value.clamp(0.0, 1.0);
+  }
+
+  Future<void> setPlayerVolume(double volume) async {
+    final value = volume.clamp(0.0, 1.0);
+    await _prefs.setDouble(_kPlayerVolume, value);
   }
 
   static const _kVinylStyle = 'vinyl_style';

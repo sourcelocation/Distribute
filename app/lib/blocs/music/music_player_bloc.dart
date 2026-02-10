@@ -19,6 +19,7 @@ class MusicPlayerEvent with _$MusicPlayerEvent {
   const factory MusicPlayerEvent.togglePlayPause() = _TogglePlayPause;
   const factory MusicPlayerEvent.stop() = _Stop;
   const factory MusicPlayerEvent.seek(Duration position) = _Seek;
+  const factory MusicPlayerEvent.setVolume(double volume) = _SetVolume;
   const factory MusicPlayerEvent.skipToQueueItem(int index) = _SkipToQueueItem;
   const factory MusicPlayerEvent.skipToNext() = _SkipToNext;
   const factory MusicPlayerEvent.skipToPrevious() = _SkipToPrevious;
@@ -39,6 +40,7 @@ class MusicPlayerBloc extends Bloc<MusicPlayerEvent, ControllerState> {
     on<_TogglePlayPause>(_onTogglePlayPause);
     on<_Stop>(_onStop);
     on<_Seek>(_onSeek);
+    on<_SetVolume>(_onSetVolume);
     on<_SkipToQueueItem>(_onSkipToQueueItem);
     on<_SkipToNext>(_onSkipToNext);
     on<_SkipToPrevious>(_onSkipToPrevious);
@@ -88,6 +90,10 @@ class MusicPlayerBloc extends Bloc<MusicPlayerEvent, ControllerState> {
 
   Future<void> _onSeek(_Seek event, Emitter<ControllerState> emit) async {
     await _controller.seek(event.position);
+  }
+
+  void _onSetVolume(_SetVolume event, Emitter<ControllerState> emit) {
+    _controller.setVolume(event.volume);
   }
 
   Future<void> _onSkipToQueueItem(

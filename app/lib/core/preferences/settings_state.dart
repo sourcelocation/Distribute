@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:distributeapp/core/preferences/download_mode.dart';
 import 'package:distributeapp/core/preferences/vinyl_style.dart';
+import 'package:distributeapp/core/preferences/audio_quality.dart';
 
 part 'settings_state.freezed.dart';
 
@@ -17,6 +18,10 @@ sealed class SettingsState with _$SettingsState {
     required bool preloadNextSongEnabled,
     required bool keepVinylSpinningWhenUnfocused,
     required DownloadMode downloadMode,
+    required List<AudioQualityOption> availableQualities,
+    required AudioQualityOption streamingQuality,
+    required AudioQualityOption downloadQuality,
+    required double playerVolume,
     required String? customDownloadPath,
     required String defaultDataPath,
     required VinylStyle vinylStyle,

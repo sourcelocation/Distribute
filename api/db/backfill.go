@@ -3,9 +3,13 @@ package db
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/ProjectDistribute/distributor/model"
 	"github.com/ProjectDistribute/distributor/utils"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -53,4 +57,70 @@ func BackfillOrdering(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+func BackfillSongFilePaths(db *gorm.DB) error {
+	const batchSize = 200
+	var lastCreatedAt time.Time
+	var lastID uuid.UUID
+	for {
+		var files []model.SongFile
+		query := db
+		if !lastCreatedAt.IsZero() || lastID != uuid.Nil {
+			query = query.Where(
+				"(created_at > ?) OR (created_at = ? AND id > ?)",
+				lastCreatedAt,
+				lastCreatedAt,
+				lastID,
+			)
+		}
+		if err := query.Order("created_at asc, id asc").Limit(batchSize).Find(&files).Error; err != nil {
+			return fmt.Errorf("failed to fetch song files: %w", err)
+		}
+		if len(files) == 0 {
+			return nil
+		}
+
+		for _, file := range files {
+			if file.ID == uuid.Nil {
+				file.ID = uuid.New()
+				if err := db.Save(&file).Error; err != nil {
+					log.Printf("Failed to assign ID to song file (song %s): %v\n", file.SongID, err)
+					continue
+				}
+			}
+
+			newPath := file.FilePath()
+			if fileExists(newPath) {
+				lastCreatedAt = file.CreatedAt
+				lastID = file.ID
+				continue
+			}
+
+			oldPath := file.LegacyFilePath()
+			if !fileExists(oldPath) {
+				lastCreatedAt = file.CreatedAt
+				lastID = file.ID
+				continue
+			}
+
+			if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+				log.Printf("Failed to create song storage dir: %v\n", err)
+				lastCreatedAt = file.CreatedAt
+				lastID = file.ID
+				continue
+			}
+
+			if err := os.Rename(oldPath, newPath); err != nil {
+				log.Printf("Failed to move song file from %s to %s: %v\n", oldPath, newPath, err)
+			}
+			lastCreatedAt = file.CreatedAt
+			lastID = file.ID
+		}
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

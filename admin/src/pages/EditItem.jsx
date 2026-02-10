@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Save, Trash2, ArrowLeft, Loader, Database, Mic, Music, PlayCircle, Upload, X, Check, Loader2 } from 'lucide-react';
-import api from '../api';
+import { Save, Trash2, ArrowLeft, Loader, Database, Mic, Music, PlayCircle, Upload, X, Check, Loader2, Play } from 'lucide-react';
+import api, { buildApiUrl } from '../api';
 import SearchableSelect from '../components/SearchableSelect';
 import { ArtistPicker } from '../components/Pickers';
 import { Input } from "@/components/ui/input"
@@ -175,17 +175,6 @@ const EditItem = () => {
         }
     };
 
-    const handleDeleteSongFile = async (fileId) => {
-        if (!window.confirm("Delete this audio file?")) return;
-        try {
-            await api.delete(`/songs/files/${fileId}`);
-            fetchSongFiles();
-        } catch (e) {
-            console.error(e);
-            alert("Failed to delete file");
-        }
-    };
-
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -352,6 +341,33 @@ const EditItem = () => {
     };
     const Icon = getIcon();
 
+    const formatBytes = (bytes) => {
+        if (!bytes || bytes <= 0) return "0 B";
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        let idx = 0;
+        let value = bytes;
+        while (value >= 1024 && idx < units.length - 1) {
+            value /= 1024;
+            idx++;
+        }
+        return `${value.toFixed(value < 10 && idx > 0 ? 2 : 1)} ${units[idx]}`;
+    };
+
+    const formatDuration = (ms) => {
+        if (!ms || ms <= 0) return null;
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    };
+
+    const songLength = (() => {
+        if (type !== 'songs' || songFiles.length === 0) return null;
+        const durations = songFiles.map(f => f.duration).filter(d => d && d > 0);
+        if (durations.length === 0) return null;
+        return formatDuration(Math.max(...durations));
+    })();
+
     return (
         <main className="flex-1 overflow-auto grid-bg p-6 flex flex-col gap-6 animate-slide-in">
             <div className="flex items-center gap-4 border-b border-white/10 pb-6">
@@ -362,7 +378,9 @@ const EditItem = () => {
                     <h2 className="text-2xl font-bold uppercase tracking-widest text-primary flex items-center gap-3">
                         <Icon className="w-6 h-6 text-primary" /> Edit {type.slice(0, -1).toUpperCase()}
                     </h2>
-                    <p className="text-[10px] uppercase font-mono tracking-wider opacity-60 mt-1">ID: {id}</p>
+                    <p className="text-[10px] uppercase font-mono tracking-wider opacity-60 mt-1">
+                        ID: {id}{songLength ? ` • Length: ${songLength}` : ''}
+                    </p>
                 </div>
             </div>
 
@@ -416,7 +434,7 @@ const EditItem = () => {
                                 {/* Current Cover Preview */}
                                 <div className="flex-shrink-0">
                                     <img
-                                        src={`/api/images/covers/${id}/lq?${Date.now()}`}
+                                        src={buildApiUrl(`/images/covers/${id}/lq?${Date.now()}`)}
                                         alt="Current Cover"
                                         className="w-24 h-24 object-cover border border-white/10"
                                         onError={(e) => e.target.style.display = 'none'}
@@ -605,28 +623,66 @@ const EditItem = () => {
                             {songFiles.length > 0 ? (
                                 <div className="space-y-2">
                                     {songFiles.map((file) => (
-                                        <div key={file.id} className="flex items-center justify-between p-3 bg-white/5 rounded border border-white/5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 bg-primary/10 rounded flex items-center justify-center text-primary font-bold text-xs uppercase">
-                                                    {file.format}
+                                        <div key={file.id} className="flex items-center justify-between p-4 bg-white/5 rounded border border-white/5">
+                                            <div className="flex items-start gap-4 flex-1">
+                                                <div className="h-12 w-12 bg-primary/10 rounded flex items-center justify-center text-primary font-bold text-[10px] uppercase text-center leading-tight">
+                                                    {file.variant ? file.variant : file.format}
                                                 </div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-white lowercase tracking-wider">.{file.format.toLowerCase()}</div>
-                                                    <div className="text-[10px] text-white/40 font-mono lowercase">
-                                                        {(file.duration / 1000).toFixed(1)}s • Added {new Date(file.created_at).toLocaleDateString()}
+                                                <div className="space-y-2 w-full">
+                                                    <div className="flex items-center gap-4 w-full">
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-bold text-white uppercase tracking-wider">
+                                                                {file.variant || 'file'}
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                                {(() => {
+                                                                    const variant = (file.variant || '').toLowerCase();
+                                                                    const format = (file.format || '').toLowerCase();
+                                                                    const codec = (file.codec || '').toLowerCase();
+                                                                    const isOriginal = variant === 'source' || (variant === '' && format !== 'ogg');
+                                                                    const isLossless = variant === 'lossless' || file.bitrate === 0 || codec === 'flac' || format === 'flac';
+                                                                    return (
+                                                                        <>
+                                                                            {isOriginal && (
+                                                                                <span className="text-[9px] text-cyan-300 font-mono border border-cyan-300/30 px-2 py-0.5">
+                                                                                    original
+                                                                                </span>
+                                                                            )}
+                                                                            {isLossless && (
+                                                                                <span className="text-[9px] text-amber-200 font-mono border border-amber-200/30 px-2 py-0.5">
+                                                                                    lossless
+                                                                                </span>
+                                                                            )}
+                                                                        </>
+                                                                    );
+                                                                })()}
+                                                                {file.bitrate > 0 && (
+                                                                    <span className="text-[9px] text-primary font-mono border border-primary/30 px-2 py-0.5">
+                                                                        {file.bitrate} kbps
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="ml-auto grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-[10px] text-white/50 font-mono text-right shrink-0">
+                                                            <span>SIZE: {formatBytes(file.size)}</span>
+                                                            <span>DURATION: {formatDuration(file.duration) || '—'}</span>
+                                                            <span>BITRATE: {file.bitrate > 0 ? `${file.bitrate} kbps` : '—'}</span>
+                                                            <span>FORMAT: {file.format?.toUpperCase() || '—'}</span>
+                                                            <span>CODEC: {file.codec?.toUpperCase() || '—'}</span>
+                                                            <span>ADDED: {new Date(file.created_at).toLocaleDateString()}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <a href={`/api/songs/download/${file.id}`} target="_blank" rel="noreferrer" className="p-2 hover:bg-white/10 rounded text-white/60 hover:text-primary transition-colors">
-                                                    <Upload className="h-4 w-4 rotate-180" />
-                                                </a>
-                                                <button
-                                                    onClick={() => handleDeleteSongFile(file.id)}
-                                                    className="p-2 hover:bg-red-500/10 rounded text-white/60 hover:text-red-500 transition-colors"
+                                            <div className="flex items-center gap-2 pl-4">
+                                                <a
+                                                    href={`${api.defaults.baseURL || ''}${(api.defaults.baseURL || '').endsWith('/') ? '' : '/'}songs/download/${file.id}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-2 hover:bg-white/10 rounded text-primary hover:text-primary transition-colors border border-primary/40"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <Play className="h-4 w-4" />
+                                                </a>
                                             </div>
                                         </div>
                                     ))}
@@ -637,9 +693,14 @@ const EditItem = () => {
                                 </div>
                             )}
 
-                            {/* Upload Area */}
+                            {/* Source Upload Area */}
                             <div className="pt-4 border-t border-white/5">
-                                <Label className="text-xs mb-2 block font-bold text-white/60 uppercase tracking-widest">Add Audio File (Quality Variant)</Label>
+                                <Label className="text-xs mb-2 block font-bold text-white/60 uppercase tracking-widest">
+                                    Replace Source Audio
+                                </Label>
+                                <p className="text-[10px] text-white/40 font-mono mb-3">
+                                    Uploading a new source replaces all existing variants. The server will regenerate profiles automatically.
+                                </p>
                                 <div
                                     {...getSongFileRoot()}
                                     className={`border-2 border-dashed p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center
@@ -655,7 +716,7 @@ const EditItem = () => {
                                     ) : (
                                         <div className="text-white/40 text-[10px] font-mono uppercase tracking-wider">
                                             <Upload className="mx-auto h-5 w-5 mb-2 opacity-50" />
-                                            <p>Drag & drop audio file here</p>
+                                            <p>Drag & drop source audio here</p>
                                             <p className="opacity-50 mt-1 text-[9px]">MP3, FLAC, WAV, OGG, M4A</p>
                                         </div>
                                     )}

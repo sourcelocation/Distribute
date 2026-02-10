@@ -2,6 +2,7 @@ import 'package:distributeapp/core/preferences/settings_repository.dart';
 import 'package:distributeapp/core/preferences/settings_state.dart';
 import 'package:distributeapp/core/preferences/download_mode.dart';
 import 'package:distributeapp/core/preferences/vinyl_style.dart';
+import 'package:distributeapp/core/preferences/audio_quality.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
@@ -20,6 +21,10 @@ class SettingsCubit extends Cubit<SettingsState> {
           keepVinylSpinningWhenUnfocused:
               _repo.keepVinylSpinningWhenUnfocused,
           downloadMode: DownloadModeX.fromIndex(_repo.downloadModeIndex),
+          availableQualities: _repo.availableQualities,
+          streamingQuality: _repo.streamingQuality,
+          downloadQuality: _repo.downloadQuality,
+          playerVolume: _repo.playerVolume,
           customDownloadPath: _repo.customDownloadPath,
           defaultDataPath: _repo.defaultDataPath,
           vinylStyle: _repo.vinylStyle,
@@ -76,8 +81,49 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(downloadMode: mode));
   }
 
+  Future<void> setAvailableQualities(List<AudioQualityOption> options) async {
+    final normalized = AudioQualityCatalog.normalize(options);
+    await _repo.setAvailableQualities(normalized);
+    final nextStreaming = AudioQualityCatalog.resolveSelection(
+      current: state.streamingQuality,
+      options: normalized,
+    );
+    final nextDownload = AudioQualityCatalog.resolveSelection(
+      current: state.downloadQuality,
+      options: normalized,
+    );
+    if (nextStreaming.id != state.streamingQuality.id) {
+      await _repo.setStreamingQualityId(nextStreaming.id);
+    }
+    if (nextDownload.id != state.downloadQuality.id) {
+      await _repo.setDownloadQualityId(nextDownload.id);
+    }
+    emit(
+      state.copyWith(
+        availableQualities: normalized,
+        streamingQuality: nextStreaming,
+        downloadQuality: nextDownload,
+      ),
+    );
+  }
+
+  Future<void> setStreamingQuality(AudioQualityOption quality) async {
+    await _repo.setStreamingQualityId(quality.id);
+    emit(state.copyWith(streamingQuality: quality));
+  }
+
+  Future<void> setDownloadQuality(AudioQualityOption quality) async {
+    await _repo.setDownloadQualityId(quality.id);
+    emit(state.copyWith(downloadQuality: quality));
+  }
+
   void setVinylStyle(VinylStyle style) async {
     await _repo.setVinylStyle(style);
     emit(state.copyWith(vinylStyle: style));
+  }
+
+  Future<void> setPlayerVolume(double volume) async {
+    await _repo.setPlayerVolume(volume);
+    emit(state.copyWith(playerVolume: volume.clamp(0.0, 1.0)));
   }
 }

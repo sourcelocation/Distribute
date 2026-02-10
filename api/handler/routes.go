@@ -13,7 +13,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func (h *Handler) Register(public *echo.Group) {
+func (h *Handler) Register(root *echo.Echo) {
+	public := root.Group("/api")
 	Handle := middleware.Handle
 	AdminMiddleware := middleware.AdminMiddleware
 
@@ -26,6 +27,9 @@ func (h *Handler) Register(public *echo.Group) {
 		SigningKey: []byte(secret),
 	}
 	jwt := echojwt.WithConfig(config)
+
+	// Route to open distribute://add-server/<SERVER_URL> URL scheme
+	root.GET("/add", h.AddServerRedirect)
 
 	// Setup
 	public.GET("/setup/status", h.SetupStatus)
@@ -138,8 +142,11 @@ func (h *Handler) Register(public *echo.Group) {
 	admin.GET("/albums", h.GetAlbums)
 	admin.DELETE("/orphans", h.RemoveOrphans)
 	admin.DELETE("/files/cleanup", h.CleanSongFiles)
+	admin.POST("/transcode/backfill", h.BackfillTranscodes)
 	admin.GET("/settings", h.GetSettings)
 	admin.PUT("/settings", h.UpdateSettings)
+	admin.GET("/migrations/status", h.GetMigrationStatus)
+	admin.POST("/migrations/retry", h.RetryMigrations)
 	// admin.POST("/rebalance-playlists", Handle(h.RebalanceAllPlaylists))
 }
 

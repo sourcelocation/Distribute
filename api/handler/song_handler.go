@@ -1,16 +1,22 @@
 package handler
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/ProjectDistribute/distributor/middleware"
 	"github.com/ProjectDistribute/distributor/utils"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/time/rate"
 )
 
 // DownloadFile godoc
@@ -34,7 +40,10 @@ func (h *Handler) DownloadFile(c *middleware.CustomContext) error {
 		return echo.NewHTTPError(http.StatusNotFound, "File not found")
 	}
 
-	filePath := file.FilePath()
+	filePath, ok := h.song_svc.ResolveSongFilePath(*file)
+	if !ok {
+		return echo.NewHTTPError(http.StatusNotFound, "File not found")
+	}
 	return c.File(filePath)
 }
 
@@ -60,7 +69,10 @@ func (h *Handler) StreamFile(c *middleware.CustomContext) error {
 		return echo.NewHTTPError(http.StatusNotFound, "File not found")
 	}
 
-	filePath := file.FilePath()
+	filePath, ok := h.song_svc.ResolveSongFilePath(*file)
+	if !ok {
+		return echo.NewHTTPError(http.StatusNotFound, "File not found")
+	}
 	fh, err := os.Open(filePath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "File not found")
@@ -77,8 +89,85 @@ func (h *Handler) StreamFile(c *middleware.CustomContext) error {
 	c.Response().Header().Set("Accept-Ranges", "bytes")
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filepath.Base(filePath)))
 
-	http.ServeContent(c.Response().Writer, c.Request(), filePath, stat.ModTime(), fh)
+	startMs := int64(0)
+	if raw := c.QueryParam("start_ms"); raw != "" {
+		if parsed, parseErr := strconv.ParseInt(raw, 10, 64); parseErr != nil || parsed < 0 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid start_ms")
+		} else {
+			startMs = parsed
+		}
+	}
+
+	if startMs > 0 {
+		return h.streamFromTime(c, filePath, file.Format, startMs)
+	}
+
+	var reader io.ReadSeeker = fh
+	if kbps, _ := strconv.Atoi(utils.Getenv("STREAM_BANDWIDTH_KBPS", "0")); kbps > 0 {
+		bytesPerSec := kbps * 1024 / 8
+		if bytesPerSec < 1 {
+			bytesPerSec = 1
+		}
+		limiter := rate.NewLimiter(rate.Limit(bytesPerSec), bytesPerSec)
+		reader = utils.NewRateLimitedReadSeeker(fh, limiter, c.Request().Context())
+	}
+
+	http.ServeContent(c.Response().Writer, c.Request(), filePath, stat.ModTime(), reader)
 	return nil
+}
+
+func (h *Handler) streamFromTime(
+	c *middleware.CustomContext,
+	filePath string,
+	format string,
+	startMs int64,
+) error {
+	// Use ffmpeg to start at a valid container boundary for seekable streams.
+	startSec := float64(startMs) / 1000.0
+	outFormat := ffmpegFormatForStream(format)
+
+	args := []string{
+		"-hide_banner",
+		"-loglevel", "error",
+		"-ss", fmt.Sprintf("%.3f", startSec),
+		"-i", filePath,
+		"-vn", "-sn", "-dn",
+		"-c", "copy",
+		"-f", outFormat,
+		"pipe:1",
+	}
+
+	cmd := exec.CommandContext(c.Request().Context(), "ffmpeg", args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to start stream")
+	}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Start(); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to start stream")
+	}
+
+	c.Response().WriteHeader(http.StatusOK)
+	if _, err := io.Copy(c.Response().Writer, stdout); err != nil {
+		log.Printf("Stream copy error: %v\n", err)
+	}
+	if err := cmd.Wait(); err != nil {
+		if c.Request().Context().Err() == nil {
+			log.Printf("ffmpeg stream error: %v (%s)\n", err, stderr.String())
+		}
+	}
+	return nil
+}
+
+func ffmpegFormatForStream(format string) string {
+	switch strings.ToLower(format) {
+	case "m4a":
+		return "ipod"
+	default:
+		return strings.ToLower(format)
+	}
 }
 
 // AssignFileToSong godoc
@@ -132,18 +221,13 @@ func (h *Handler) AssignFileToSong(c echo.Context) error {
 	}
 	defer src.Close()
 
-	songFile, err := h.song_svc.AssignFileToSong(songID, *format, src)
+	songFiles, err := h.song_svc.AssignFileToSong(songID, *format, src)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to assign file to song: "+err.Error())
 	}
 	return c.JSON(http.StatusOK, AssignFileToSongResponse{
 		Status: "File assigned to song successfully",
-		File: SongFile{
-			ID:        songFile.ID,
-			CreatedAt: songFile.CreatedAt,
-			Format:    songFile.Format,
-			Duration:  songFile.Duration,
-		},
+		Files:  FromSongFileModels(songFiles),
 	})
 }
 
@@ -177,18 +261,13 @@ func (h *Handler) AssignFileToSongByPath(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Source path must be within /app/storage/downloads/. Received: "+cleanPath)
 	}
 
-	songFile, err := h.song_svc.AssignFileToSongByPath(req.SongID, cleanPath)
+	songFiles, err := h.song_svc.AssignFileToSongByPath(req.SongID, cleanPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to assign file to song: "+err.Error())
 	}
 	return c.JSON(http.StatusOK, AssignFileToSongResponse{
 		Status: "File assigned to song successfully",
-		File: SongFile{
-			ID:        songFile.ID,
-			CreatedAt: songFile.CreatedAt,
-			Format:    songFile.Format,
-			Duration:  songFile.Duration,
-		},
+		Files:  FromSongFileModels(songFiles),
 	})
 }
 
@@ -291,6 +370,10 @@ func (h *Handler) GetSongFiles(c echo.Context) error {
 	files, err := h.song_svc.GetSongFiles(songID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to retrieve song files")
+	}
+	if h.song_svc.Transcode != nil {
+		settings := h.song_svc.Transcode.GetSettings()
+		files = h.song_svc.Transcode.FilterFilesBySettings(files, settings)
 	}
 	return c.JSON(http.StatusOK, FromSongFileModels(files))
 }

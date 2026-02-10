@@ -23,6 +23,7 @@ services:
       - LISTEN_ON=0.0.0.0:8585
       - MEILI_URL=http://meilisearch:7700
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
+      - STREAM_BANDWIDTH_KBPS=128
     depends_on:
       - meilisearch
     networks:

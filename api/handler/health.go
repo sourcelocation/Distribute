@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/ProjectDistribute/distributor/service"
 	"github.com/labstack/echo/v4"
 )
 
@@ -30,10 +31,18 @@ func (h *Handler) GetServerInfo(c echo.Context) error {
 		announcement = "Feel free to request more music!"
 	}
 
-	version := map[string]any{
-		"version":                   h.version,
-		"request_mail_announcement": announcement,
-		"request_mail_categories":   h.mail_svc.GetCategories(),
+	qualities := []service.TranscodeQuality{}
+	if h.song_svc != nil && h.song_svc.Transcode != nil {
+		qualities = h.song_svc.Transcode.AvailableQualities()
 	}
-	return c.JSON(http.StatusOK, version)
+
+	return c.JSON(
+		http.StatusOK,
+		ServerInfoResponse{
+			Version:                 h.version,
+			RequestMailAnnouncement: announcement,
+			RequestMailCategories:   h.mail_svc.GetCategories(),
+			TranscodeQualities:      qualities,
+		},
+	)
 }

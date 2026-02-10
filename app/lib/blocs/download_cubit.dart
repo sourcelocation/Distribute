@@ -2,6 +2,7 @@ import 'package:distributeapp/model/available_file.dart';
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/repositories/download/song_download_service.dart';
 import 'package:distributeapp/repositories/playlist_repository.dart';
+import 'package:distributeapp/core/preferences/settings_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -28,6 +29,7 @@ abstract class DownloadState with _$DownloadState {
 class DownloadCubit extends Cubit<DownloadState> {
   final SongDownloadService _downloadService;
   final PlaylistRepository _playlistRepository;
+  final SettingsRepository _settingsRepository;
 
   final List<Song> _downloadQueue = [];
 
@@ -36,6 +38,7 @@ class DownloadCubit extends Cubit<DownloadState> {
   DownloadCubit(
     this._downloadService,
     this._playlistRepository,
+    this._settingsRepository,
   )
     : super(const DownloadState());
 
@@ -63,6 +66,7 @@ class DownloadCubit extends Cubit<DownloadState> {
         try {
           final file = await _playlistRepository.resolveFirstAvailableFile(
             song.id,
+            preference: _settingsRepository.downloadQuality,
           );
           if (file == null) continue;
 

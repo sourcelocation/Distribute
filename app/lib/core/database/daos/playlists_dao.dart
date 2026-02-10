@@ -42,6 +42,13 @@ class PlaylistsDao extends DatabaseAccessor<AppDatabase>
     return query.watch();
   }
 
+  Future<int?> getSongDurationSeconds(String songId) async {
+    final row =
+        await (select(songs)..where((t) => t.id.equals(songId)))
+            .getSingleOrNull();
+    return row?.durationSeconds;
+  }
+
   Future<void> createPlaylist(PlaylistEntity newPlaylist) async {
     await transaction(() async {
       await into(playlists).insert(newPlaylist);

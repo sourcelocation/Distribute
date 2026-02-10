@@ -20,6 +20,7 @@ type Handler struct {
 	search_svc   *service.SearchService
 	stats_svc    *service.StatsService
 	settings_svc *store.SettingsStore
+	migrationMgr *service.MigrationManager
 }
 
 func NewHandler(
@@ -34,6 +35,7 @@ func NewHandler(
 	search_svc *service.SearchService,
 	stats_svc *service.StatsService,
 	settings_svc *store.SettingsStore,
+	migrationMgr *service.MigrationManager,
 ) *Handler {
 	return &Handler{
 		version:      version,
@@ -47,6 +49,7 @@ func NewHandler(
 		search_svc:   search_svc,
 		stats_svc:    stats_svc,
 		settings_svc: settings_svc,
+		migrationMgr: migrationMgr,
 	}
 }
 
@@ -68,16 +71,40 @@ func GigaHandler(d *gorm.DB, storage service.FileStorage, version string) *Handl
 	// Services
 	search_svc, _ := service.NewSearchService()
 	mail_svc := service.NewMailService(mail_store, settings_store)
+	transcode_svc := service.NewTranscodeService(settings_store)
 	artist_svc := &service.ArtistService{Store: artist_store, SearchSvc: search_svc}
 	album_svc := &service.AlbumService{Store: album_store, Storage: storage, SearchSvc: search_svc}
-	song_svc := &service.SongService{Store: song_store, Storage: storage, ArtistSvc: artist_svc, AlbumSvc: album_svc, SearchSvc: search_svc}
+	song_svc := &service.SongService{
+		Store:     song_store,
+		Storage:   storage,
+		ArtistSvc: artist_svc,
+		AlbumSvc:  album_svc,
+		SearchSvc: search_svc,
+		Transcode: transcode_svc,
+	}
 	playlist_svc := &service.PlaylistService{Store: playlist_store, SearchSvc: search_svc}
 	stats_svc := service.NewStatsService()
 
 	secret := getJWTSecret()
 	user_svc := &service.UserService{Store: user_store, PlaylistService: playlist_svc, JWTSecret: secret}
 
+	migration_mgr := service.NewMigrationManager(d, settings_store, song_svc, version)
+	migration_mgr.StartAsync()
+
 	// // Handlers
-	h := NewHandler(version, d, song_svc, mail_svc, artist_svc, album_svc, user_svc, playlist_svc, search_svc, stats_svc, settings_store)
+	h := NewHandler(
+		version,
+		d,
+		song_svc,
+		mail_svc,
+		artist_svc,
+		album_svc,
+		user_svc,
+		playlist_svc,
+		search_svc,
+		stats_svc,
+		settings_store,
+		migration_mgr,
+	)
 	return h
 }

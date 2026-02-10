@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:distributeapp/model/song.dart';
 import 'package:distributeapp/screens/player/player_slider.dart';
+import 'package:distributeapp/screens/player/player_volume_slider.dart';
 import 'package:distributeapp/screens/player/queue_sheet.dart';
 import 'package:distributeapp/screens/player/vinyl.dart';
 import 'package:distributeapp/core/preferences/vinyl_style.dart';
@@ -240,6 +241,10 @@ class FullPlayerContent extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           MusicPlayerSlider(
+                            primaryColor: artworkData.tintedColor(),
+                          ),
+                          const SizedBox(height: 10),
+                          MusicPlayerVolumeSlider(
                             primaryColor: artworkData.tintedColor(),
                           ),
                           const SizedBox(height: 20),

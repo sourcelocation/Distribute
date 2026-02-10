@@ -1,5 +1,6 @@
 import 'package:distributeapp/model/server_info.dart';
 import 'package:distributeapp/main.dart';
+import 'package:distributeapp/core/preferences/settings_cubit.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -23,14 +24,19 @@ class ServerStatusState with _$ServerStatusState {
 // Cubit
 class ServerStatusCubit extends Cubit<ServerStatusState> {
   final ServerStatusApi _api;
+  final SettingsCubit _settingsCubit;
 
-  ServerStatusCubit(this._api) : super(const ServerStatusState.initial());
+  ServerStatusCubit(this._api, this._settingsCubit)
+    : super(const ServerStatusState.initial());
 
   Future<void> loadStatus() async {
     emit(const ServerStatusState.loading());
     try {
       final data = await _api.getServerInfo();
       final info = ServerInfo.fromJson(data);
+      if (info.transcodeQualities.isNotEmpty) {
+        await _settingsCubit.setAvailableQualities(info.transcodeQualities);
+      }
 
       String? validationMessage;
       // Check version compatibility

@@ -15,6 +15,9 @@ type SongFile struct {
 
 	SongID   uuid.UUID `gorm:"type:uuid"`
 	Format   string
+	Codec    string
+	Variant  string
+	Bitrate  int
 	Duration uint
 	Size     int64
 }
@@ -27,5 +30,13 @@ func (s *SongFile) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 func (s *SongFile) FilePath() string {
-	return "storage/songs/" + s.SongID.String() + "." + s.Format
+	return "storage/songs/" + s.ID.String() + "." + s.Format
+}
+
+func (s *SongFile) LegacyFilePath() string {
+	base := "storage/songs/" + s.SongID.String()
+	if s.Variant != "" {
+		return base + "_" + s.Variant + "." + s.Format
+	}
+	return base + "." + s.Format
 }

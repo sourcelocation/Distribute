@@ -46,6 +46,10 @@ func (ss *SongStore) CreateSongFile(sf *model.SongFile) error {
 	return ss.db.Create(sf).Error
 }
 
+func (ss *SongStore) UpdateSongFile(sf *model.SongFile) error {
+	return ss.db.Save(sf).Error
+}
+
 func (ss *SongStore) DeleteSongFile(id uuid.UUID) error {
 	return ss.db.Delete(&model.SongFile{}, id).Error
 }
@@ -71,6 +75,36 @@ func (ss *SongStore) GetFileByID(fileID uuid.UUID) (*model.SongFile, error) {
 func (ss *SongStore) GetAllSongs() ([]model.Song, error) {
 	var songs []model.Song
 	err := ss.db.Preload("SongFiles").Preload("Album").Preload("Artists").Find(&songs).Error
+	if err != nil {
+		return nil, err
+	}
+	return songs, nil
+}
+
+func (ss *SongStore) CountSongs() (int, error) {
+	var count int64
+	if err := ss.db.Model(&model.Song{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (ss *SongStore) GetSongsAfter(
+	createdAt time.Time,
+	lastID uuid.UUID,
+	limit int,
+) ([]model.Song, error) {
+	var songs []model.Song
+	query := ss.db.Preload("SongFiles").Preload("Album").Preload("Artists")
+	if !createdAt.IsZero() || lastID != uuid.Nil {
+		query = query.Where(
+			"(created_at > ?) OR (created_at = ? AND id > ?)",
+			createdAt,
+			createdAt,
+			lastID,
+		)
+	}
+	err := query.Order("created_at asc, id asc").Limit(limit).Find(&songs).Error
 	if err != nil {
 		return nil, err
 	}

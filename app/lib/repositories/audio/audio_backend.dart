@@ -10,6 +10,11 @@ class AudioBackend {
   final bool _dummySoundEnabled;
   _PlaybackJob? _currentJob;
   _PlaybackJob? _preparedJob;
+  double _volume = 1.0;
+  bool _isDucked = false;
+  Timer? _positionTimer;
+  final StreamController<Duration> _positionController =
+      StreamController<Duration>.broadcast();
 
   final _songFinishedController = StreamController<void>.broadcast();
   Stream<void> get onSongFinished => _songFinishedController.stream;
@@ -17,6 +22,7 @@ class AudioBackend {
   final _gaplessTransitionController = StreamController<String>.broadcast();
   Stream<String> get onAutomaticSongTransition =>
       _gaplessTransitionController.stream;
+  Stream<Duration> get positionStream => _positionController.stream;
 
   AudioBackend({bool dummySoundEnabled = false})
     : _dummySoundEnabled = dummySoundEnabled;
@@ -33,9 +39,28 @@ class AudioBackend {
     );
 
     _session = await AudioSession.instance;
-    await _session!.configure(AudioSessionConfiguration.music());
+    // Use ambient when idle so other audio keeps playing until we start playback.
+    await _session!.configure(
+      const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.ambient,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.music,
+          usage: AndroidAudioUsage.media,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+      ),
+    );
     _handleInterruptions(_session!);
+    _startPositionTicker();
   }
+
+  void setVolume(double volume) {
+    if (_dummySoundEnabled) return;
+    _volume = volume.clamp(0.0, 1.0);
+    _applyVolume();
+  }
+
+  double get volume => _volume;
 
   Future<void> _ensureSoLoudTempDir() async {
     try {
@@ -61,6 +86,7 @@ class AudioBackend {
     }
 
     try {
+      await _session!.configure(AudioSessionConfiguration.music());
       await _currentJob!.play();
       await _session?.setActive(true);
     } catch (e) {
@@ -103,6 +129,17 @@ class AudioBackend {
 
     if (disposeSession) {
       await _session?.setActive(false);
+      // Return to ambient so other apps resume when we're not playing.
+      await _session?.configure(
+        const AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.ambient,
+          androidAudioAttributes: AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.music,
+            usage: AndroidAudioUsage.media,
+          ),
+          androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        ),
+      );
     }
   }
 
@@ -143,8 +180,18 @@ class AudioBackend {
   }
 
   void dispose() {
+    _positionTimer?.cancel();
+    _positionController.close();
     _songFinishedController.close();
     _gaplessTransitionController.close();
+  }
+
+  void _startPositionTicker() {
+    _positionTimer?.cancel();
+    _positionTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (_dummySoundEnabled) return;
+      _positionController.add(getPosition());
+    });
   }
 
   void _handleInterruptions(AudioSession session) {
@@ -154,10 +201,8 @@ class AudioBackend {
       if (event.begin) {
         switch (event.type) {
           case AudioInterruptionType.duck:
-            SoLoud.instance.fadeGlobalVolume(
-              0.1,
-              const Duration(milliseconds: 300),
-            );
+            _isDucked = true;
+            _applyVolume(fade: true);
             break;
           case AudioInterruptionType.pause:
           case AudioInterruptionType.unknown:
@@ -167,10 +212,8 @@ class AudioBackend {
       } else {
         switch (event.type) {
           case AudioInterruptionType.duck:
-            SoLoud.instance.fadeGlobalVolume(
-              1,
-              const Duration(milliseconds: 300),
-            );
+            _isDucked = false;
+            _applyVolume(fade: true);
             break;
           case AudioInterruptionType.pause:
             resume();
@@ -181,6 +224,19 @@ class AudioBackend {
       }
     });
   }
+
+  void _applyVolume({bool fade = false}) {
+    if (_dummySoundEnabled) return;
+    final target = _isDucked ? _volume * 0.1 : _volume;
+    if (fade) {
+      SoLoud.instance.fadeGlobalVolume(
+        target,
+        const Duration(milliseconds: 300),
+      );
+    } else {
+      SoLoud.instance.setGlobalVolume(target);
+    }
+  }
 }
 
 typedef _JobCallback = void Function(_PlaybackJob job);
@@ -190,24 +246,25 @@ class _PlaybackJob {
   final AudioSession session;
   final _JobCallback onFinished;
   final String? format;
-
   AudioSource? _source;
   SoundHandle? _handle;
   StreamSubscription? _eventSub;
   StreamSubscription<List<int>>? _streamSub;
   HttpClient? _httpClient;
   bool _isStreamSource = false;
+  bool _isSeeking = false;
 
   bool _isCancelled = false;
   bool _isManualStop = false;
   bool isLoaded = false;
-
+  bool _streamEnded = false;
   _PlaybackJob(this.path, this.session, this.onFinished, this.format);
 
   Future<void> load() async {
     if (_isCancelled) return;
 
     try {
+      _streamEnded = false;
       final isRemote =
           path.startsWith('http://') || path.startsWith('https://');
       final source = isRemote
@@ -221,11 +278,17 @@ class _PlaybackJob {
       isLoaded = true;
 
       _eventSub = source.soundEvents.listen((event) {
+        debugPrint(
+          'AudioBackend: soundEvent=${event.event} handle=${event.handle} '
+          'isStream=$_isStreamSource streamEnded=$_streamEnded manualStop=$_isManualStop',
+        );
         if (event.event == SoundEventType.handleIsNoMoreValid &&
             !_isManualStop &&
             _handle != null) {
           if (event.handle == _handle!) {
-            onFinished(this);
+            if (!_isStreamSource || _streamEnded) {
+              onFinished(this);
+            }
           }
         }
       });
@@ -248,21 +311,35 @@ class _PlaybackJob {
   Future<AudioSource> _loadRemote() async {
     if (_supportsBufferStream(format)) {
       _isStreamSource = true;
-      final source = SoLoud.instance.setBufferStream(
-        maxBufferSizeDuration: const Duration(hours: 4),
-        bufferingType: BufferingType.preserved,
-        bufferingTimeNeeds: 1.0,
-        format: BufferType.auto,
-      );
+      _streamEnded = false;
+      final source = _createBufferStreamSource();
       await _startHttpStream(source);
       return source;
     }
     return SoLoud.instance.loadUrl(path);
   }
 
-  Future<void> _startHttpStream(AudioSource source) async {
+  AudioSource _createBufferStreamSource() {
+    return SoLoud.instance.setBufferStream(
+      maxBufferSizeDuration: const Duration(hours: 4),
+      bufferingType: BufferingType.preserved,
+      bufferingTimeNeeds: 1.0,
+      format: BufferType.auto,
+    );
+  }
+
+  Future<void> _startHttpStream(
+    AudioSource source, {
+    Duration startPosition = Duration.zero,
+  }) async {
     _httpClient = HttpClient();
-    final request = await _httpClient!.getUrl(Uri.parse(path));
+    var uri = Uri.parse(path);
+    if (startPosition > Duration.zero) {
+      final params = Map<String, String>.from(uri.queryParameters);
+      params['start_ms'] = startPosition.inMilliseconds.toString();
+      uri = uri.replace(queryParameters: params);
+    }
+    final request = await _httpClient!.getUrl(uri);
     final response = await request.close();
     if (_isCancelled) return;
     if (response.statusCode != 200 && response.statusCode != 206) {
@@ -270,10 +347,13 @@ class _PlaybackJob {
         'Stream request failed with status ${response.statusCode}',
       );
     }
-
     _streamSub = response.listen(
       (data) {
         if (_isCancelled) return;
+        debugPrint(
+          'AudioBackend: stream chunk bytes=${data.length} '
+          'isCancelled=$_isCancelled',
+        );
         _streamSub?.pause();
         _pushChunk(source, Uint8List.fromList(data)).whenComplete(() {
           if (!_isCancelled) {
@@ -283,16 +363,18 @@ class _PlaybackJob {
       },
       onDone: () {
         if (!_isCancelled) {
+          debugPrint('AudioBackend: stream onDone');
+          _streamEnded = true;
           try {
             SoLoud.instance.setDataIsEnded(source);
           } catch (_) {}
         }
       },
-      onError: (_) {
+      onError: (error) {
+        // Treat stream errors as temporary stalls; don't end playback or skip.
         if (!_isCancelled) {
-          try {
-            SoLoud.instance.setDataIsEnded(source);
-          } catch (_) {}
+          debugPrint('AudioBackend: stream onError: $error');
+          _streamEnded = false;
         }
       },
       cancelOnError: true,
@@ -305,6 +387,7 @@ class _PlaybackJob {
         SoLoud.instance.addAudioDataStream(source, chunk);
         return;
       } catch (e) {
+        debugPrint('AudioBackend: addAudioDataStream error: $e');
         await Future.delayed(const Duration(milliseconds: 50));
       }
     }
@@ -361,14 +444,75 @@ class _PlaybackJob {
   }
 
   void seek(Duration pos) {
-    if (_handle != null && SoLoud.instance.getIsValidVoiceHandle(_handle!)) {
-      SoLoud.instance.seek(_handle!, pos);
+    if (_handle == null || !SoLoud.instance.getIsValidVoiceHandle(_handle!)) {
+      return;
     }
+    if (_isStreamSource) {
+      debugPrint('AudioBackend: seek stream pos=$pos');
+      unawaited(_seekStream(pos));
+      return;
+    }
+    SoLoud.instance.seek(_handle!, pos);
   }
 
   Duration getPosition() {
     if (_handle == null) return Duration.zero;
     final s = SoLoud.instance.getPosition(_handle!);
     return Duration(milliseconds: s.inMilliseconds);
+  }
+
+  Future<void> _seekStream(Duration pos) async {
+    if (_isCancelled || _isSeeking) return;
+    if (pos < Duration.zero) return;
+
+    _isSeeking = true;
+    _isManualStop = true;
+    try {
+      await _streamSub?.cancel();
+      _streamSub = null;
+      _httpClient?.close(force: true);
+      _httpClient = null;
+
+      if (_handle != null) {
+        SoLoud.instance.stop(_handle!);
+        _handle = null;
+      }
+
+      if (_source != null) {
+        SoLoud.instance.disposeSource(_source!);
+        _source = null;
+      }
+
+      await _eventSub?.cancel();
+      _eventSub = null;
+
+      final source = _createBufferStreamSource();
+      _source = source;
+      isLoaded = true;
+      _streamEnded = false;
+      _isStreamSource = true;
+
+      _eventSub = source.soundEvents.listen((event) {
+        debugPrint(
+          'AudioBackend: soundEvent=${event.event} handle=${event.handle} '
+          'isStream=$_isStreamSource streamEnded=$_streamEnded manualStop=$_isManualStop',
+        );
+        if (event.event == SoundEventType.handleIsNoMoreValid &&
+            !_isManualStop &&
+            _handle != null) {
+          if (event.handle == _handle!) {
+            if (!_isStreamSource || _streamEnded) {
+              onFinished(this);
+            }
+          }
+        }
+      });
+
+      await _startHttpStream(source, startPosition: pos);
+      _handle = await SoLoud.instance.play(source);
+    } finally {
+      _isManualStop = false;
+      _isSeeking = false;
+    }
   }
 }

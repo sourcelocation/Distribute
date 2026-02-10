@@ -48,6 +48,10 @@ func (h *Handler) UpdateSettings(c echo.Context) error {
 		"server_url":                true,
 		"mail_categories":           true,
 		"request_mail_announcement": true,
+		"transcode_bitrates":        true,
+		"transcode_profiles":        true,
+		"transcode_160_enabled":     true,
+		"transcode_320_enabled":     true,
 	}
 
 	for key, value := range input {

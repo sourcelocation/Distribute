@@ -35,6 +35,7 @@ sealed class ControllerState with _$ControllerState {
     required ArtworkData? nextArtworkData,
     required ArtworkData? previousArtworkData,
     required AudioProcessingState processingState,
+    required double volume,
   }) = _ControllerState;
 
   factory ControllerState.initial() => ControllerState(
@@ -50,6 +51,7 @@ sealed class ControllerState with _$ControllerState {
     nextArtworkData: null,
     previousArtworkData: null,
     processingState: AudioProcessingState.idle,
+    volume: 1.0,
   );
 
   Duration get duration => mediaItem?.duration ?? Duration.zero;
@@ -72,10 +74,7 @@ class MusicPlayerController {
     return await File(localPath).exists();
   }
 
-  Future<SongTapDecision> decideSongTap(
-    Song song,
-    DownloadMode mode,
-  ) async {
+  Future<SongTapDecision> decideSongTap(Song song, DownloadMode mode) async {
     if (await isSongAvailable(song)) {
       return const SongTapDecision.playNow();
     }
@@ -108,6 +107,7 @@ class MusicPlayerController {
     if (fileId == null) {
       resolvedFile = await playlistRepository.resolveFirstAvailableFile(
         song.id,
+        preference: settingsRepository.streamingQuality,
         persistSelection: true,
       );
       if (resolvedFile == null) return null;
@@ -122,14 +122,16 @@ class MusicPlayerController {
 
   List<Song>? _lastProcessedQueue;
   final Map<String, MediaItem> _mediaItemCache = {};
+  final Map<String, int> _durationSecondsCache = {};
 
   final StreamController<ControllerState> _stateController =
       StreamController<ControllerState>.broadcast();
-  ControllerState _state = ControllerState.initial();
+  late ControllerState _state;
   Stream<ControllerState> get stateStream => _stateController.stream;
   ControllerState get state => _state;
 
   Duration get currentPosition => _audioBackend.getPosition();
+  Stream<Duration> get positionStream => _audioBackend.positionStream;
 
   StreamSubscription? _queueSubscription;
   StreamSubscription? _audioSubscription;
@@ -141,6 +143,9 @@ class MusicPlayerController {
     required this.playlistRepository,
     required this.downloadApi,
   }) {
+    _state = ControllerState.initial().copyWith(
+      volume: settingsRepository.playerVolume,
+    );
     _audioBackend = AudioBackend(
       dummySoundEnabled: settingsRepository.dummySoundEnabled,
     );
@@ -155,6 +160,7 @@ class MusicPlayerController {
 
   Future<void> init() async {
     await _audioBackend.init();
+    _audioBackend.setVolume(_state.volume);
 
     // Use switchMap to cancel previous pending play requests if queue changes rapidly
     _queueSubscription = _queueManager.stateStream
@@ -162,9 +168,9 @@ class MusicPlayerController {
         .listen((_) {});
 
     _audioSubscription = _audioBackend.onSongFinished.listen(_onSongFinished);
-    _gaplessSubscription = _audioBackend.onAutomaticSongTransition.listen(
-      _onAutomaticSongTransition,
-    );
+    // _gaplessSubscription = _audioBackend.onAutomaticSongTransition.listen(
+    //   _onAutomaticSongTransition,
+    // );
   }
 
   Future<void> dispose() async {
@@ -252,6 +258,15 @@ class MusicPlayerController {
   Future<void> seek(Duration position) async {
     _audioBackend.seek(position);
     _emitState(_state.copyWith(position: position));
+  }
+
+  void setVolume(double volume) {
+    final nextVolume = volume.clamp(0.0, 1.0);
+    _audioBackend.setVolume(nextVolume);
+    settingsRepository.setPlayerVolume(nextVolume);
+    if (_state.volume != nextVolume) {
+      _emitState(_state.copyWith(volume: nextVolume));
+    }
   }
 
   // --- Queue Actions ---
@@ -410,7 +425,7 @@ class MusicPlayerController {
     );
 
     try {
-      await _audioBackend.play(source.path, format: source.format);
+      await _audioBackend.play(source.path);
 
       _loadArtworkForSong(song);
 
@@ -475,8 +490,8 @@ class MusicPlayerController {
       if (isNext && settingsRepository.preloadNextSongEnabled) {
         final source = await _resolvePlaybackSource(song);
         if (source != null && source.isLocal) {
-        await _audioBackend.preload(source.path, format: source.format);
-      }
+          // await _audioBackend.preload(source.path, format: source.format);
+        }
       }
 
       try {
@@ -521,6 +536,19 @@ class MusicPlayerController {
     Uri? artUri;
     Duration duration = Duration.zero;
 
+    var cachedDurationSeconds = _durationSecondsCache[song.id];
+    if (cachedDurationSeconds == null) {
+      cachedDurationSeconds = await playlistRepository.getSongDurationSeconds(
+        song.id,
+      );
+      if (cachedDurationSeconds != null) {
+        _durationSecondsCache[song.id] = cachedDurationSeconds;
+      }
+    }
+    if (cachedDurationSeconds != null && cachedDurationSeconds > 0) {
+      duration = Duration(seconds: cachedDurationSeconds);
+    }
+
     if (loadArtwork) {
       // Reuse from current state if same album, else fetch
       final cached = _state.artworkData;
@@ -541,9 +569,11 @@ class MusicPlayerController {
           );
         }
       }
-      duration = Duration(
-        milliseconds: (await song.getDuration(rootPath))?.inMilliseconds ?? 0,
-      );
+      if (duration == Duration.zero) {
+        duration = Duration(
+          milliseconds: (await song.getDuration(rootPath))?.inMilliseconds ?? 0,
+        );
+      }
     }
 
     // Resolve path if not provided but needed

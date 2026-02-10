@@ -30,6 +30,8 @@ class AppIcons {
       isCupertino ? CupertinoIcons.link : Icons.webhook;
   static IconData get volumeOff =>
       isCupertino ? CupertinoIcons.volume_off : Icons.volume_off;
+  static IconData get volumeUp =>
+      isCupertino ? CupertinoIcons.volume_up : Icons.volume_up;
   static IconData get deleteForever =>
       isCupertino ? CupertinoIcons.trash : Icons.delete_forever;
   static IconData get bugReport =>

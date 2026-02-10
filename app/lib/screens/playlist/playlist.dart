@@ -616,10 +616,13 @@ class _SongTileState extends State<_SongTile> {
               ),
               const SizedBox(height: 16),
               ...files.map((file) {
+                final bitrateLabel = file.bitrate > 0
+                    ? '${file.bitrate} kbps'
+                    : 'Unknown bitrate';
                 return HoverableListTile(
                   title: Text(file.format.toUpperCase()),
                   subtitle: Text(
-                    "Size: ${(file.size / 1024 / 1024).toStringAsFixed(2)} MB",
+                    "Size: ${(file.size / 1024 / 1024).toStringAsFixed(2)} MB • $bitrateLabel",
                   ),
                   trailing: Icon(AppIcons.download),
                   onTap: () {

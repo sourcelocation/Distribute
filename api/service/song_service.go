@@ -5,14 +5,16 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ProjectDistribute/distributor/model"
 	"github.com/ProjectDistribute/distributor/store"
+	"github.com/ProjectDistribute/distributor/utils"
 	"github.com/google/uuid"
-	"github.com/mewkiz/flac"
-	"github.com/tcolgate/mp3"
 )
 
 type FileStorage interface {
@@ -28,6 +30,7 @@ type SongService struct {
 	ArtistSvc *ArtistService
 	AlbumSvc  *AlbumService
 	SearchSvc *SearchService
+	Transcode *TranscodeService
 }
 
 type SongCreationArtist struct {
@@ -172,39 +175,50 @@ func (s *SongService) UpdateSong(songID uuid.UUID, title string, artistsInput []
 	return song, nil
 }
 
-func (s *SongService) AssignFileToSong(songID uuid.UUID, format string, data io.Reader) (*model.SongFile, error) {
+func (s *SongService) AssignFileToSong(songID uuid.UUID, format string, data io.Reader) ([]model.SongFile, error) {
 	song, err := s.Store.GetSongByID(songID)
 	if err != nil {
 		return nil, fmt.Errorf("song not found")
 	}
 
-	sf := model.SongFile{SongID: song.ID, Format: format}
-
-	if err := s.Storage.Save(sf.FilePath(), data); err != nil {
-		return nil, fmt.Errorf("failed to save song file")
+	if err := s.removeAllSongFiles(song.ID); err != nil {
+		return nil, fmt.Errorf("failed to remove existing song files: %v", err)
 	}
 
-	duration, err := s.ProbeDuration(sf.FilePath())
+	tmpFile, err := os.CreateTemp("", "upload-*."+format)
 	if err != nil {
-		_ = s.Storage.Delete(sf.FilePath())
-		return nil, fmt.Errorf("failed to probe song file duration: %v", err)
+		return nil, fmt.Errorf("failed to create temp file: %v", err)
 	}
-	sf.Duration = uint(duration * 1000)
-	if info, err := os.Stat(sf.FilePath()); err == nil {
-		sf.Size = info.Size()
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmpFile, data); err != nil {
+		tmpFile.Close()
+		return nil, fmt.Errorf("failed to buffer upload: %v", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return nil, fmt.Errorf("failed to finalize upload buffer: %v", err)
 	}
 
-	if err := s.Store.CreateSongFile(&sf); err != nil {
-		return nil, fmt.Errorf("failed to create song file record")
+	sourceFile, err := s.storeSourceFile(song.ID, tmpPath, format)
+	if err != nil {
+		return nil, err
 	}
-
-	return &sf, nil
+	files, err := s.transcodeFromPath(song.ID, sourceFile.FilePath(), nil)
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }
 
-func (s *SongService) AssignFileToSongByPath(songID uuid.UUID, sourcePath string) (*model.SongFile, error) {
+func (s *SongService) AssignFileToSongByPath(songID uuid.UUID, sourcePath string) ([]model.SongFile, error) {
 	song, err := s.Store.GetSongByID(songID)
 	if err != nil {
 		return nil, fmt.Errorf("song not found")
+	}
+
+	if err := s.removeAllSongFiles(song.ID); err != nil {
+		return nil, fmt.Errorf("failed to remove existing song files: %v", err)
 	}
 
 	ext := strings.TrimPrefix(filepath.Ext(sourcePath), ".")
@@ -222,28 +236,16 @@ func (s *SongService) AssignFileToSongByPath(songID uuid.UUID, sourcePath string
 		return nil, fmt.Errorf("unsupported file format: %s", ext)
 	}
 
-	sf := model.SongFile{SongID: song.ID, Format: ext}
-	destPath := sf.FilePath()
-
-	if err := s.Storage.Move(sourcePath, destPath); err != nil {
-		return nil, fmt.Errorf("failed to move song file: %v", err)
-	}
-
-	duration, err := s.ProbeDuration(destPath)
+	sourceFile, err := s.storeSourceFile(song.ID, sourcePath, ext)
 	if err != nil {
-		_ = s.Storage.Delete(destPath)
-		return nil, fmt.Errorf("failed to probe song file duration: %v", err)
-	}
-	sf.Duration = uint(duration * 1000)
-	if info, err := os.Stat(destPath); err == nil {
-		sf.Size = info.Size()
+		return nil, err
 	}
 
-	if err := s.Store.CreateSongFile(&sf); err != nil {
-		return nil, fmt.Errorf("failed to create song file record")
+	files, err := s.transcodeFromPath(song.ID, sourceFile.FilePath(), nil)
+	if err != nil {
+		return nil, err
 	}
-
-	return &sf, nil
+	return files, nil
 }
 
 func (s *SongService) DeleteSong(songID uuid.UUID) error {
@@ -283,6 +285,19 @@ func (s *SongService) DeleteSongFile(fileID uuid.UUID) error {
 	return nil
 }
 
+func (s *SongService) removeAllSongFiles(songID uuid.UUID) error {
+	files, err := s.Store.GetSongFilesBySongID(songID)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if err := s.DeleteSongFile(file.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *SongService) GetSongFiles(songID uuid.UUID) ([]model.SongFile, error) {
 	return s.Store.GetSongFilesBySongID(songID)
 }
@@ -292,45 +307,340 @@ func (s *SongService) GetSongsByAlbumID(albumID uuid.UUID) ([]model.Song, error)
 }
 
 func (s *SongService) ProbeDuration(path string) (float64, error) {
-	f, err := os.Open(path)
+	cmd := exec.Command(
+		"ffprobe",
+		"-v",
+		"error",
+		"-show_entries",
+		"format=duration",
+		"-of",
+		"default=nw=1:nk=1",
+		path,
+	)
+	output, err := cmd.Output()
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
-
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".mp3":
-		d := mp3.NewDecoder(f)
-		var duration float64
-		var frame mp3.Frame
-		var skipped int
-		for {
-			if err := d.Decode(&frame, &skipped); err != nil {
-				if err == io.EOF {
-					break
-				}
-				break
-			}
-			duration += frame.Duration().Seconds()
-		}
-		return duration, nil
-
-	case ".flac":
-		stream, err := flac.Parse(f)
-		if err != nil {
-			return 0, err
-		}
-		if stream.Info.SampleRate == 0 {
-			return 0, nil
-		}
-		return float64(stream.Info.NSamples) / float64(stream.Info.SampleRate), nil
-
-	default:
-		// Unsupported format for duration probing
-		log.Printf("Warning: Duration probing not supported for %s\n", ext)
-		return 0, nil
+	value := strings.TrimSpace(string(output))
+	if value == "" {
+		return 0, fmt.Errorf("empty duration output")
 	}
+	return strconv.ParseFloat(value, 64)
+}
+
+func (s *SongService) ComputeBitrateKbps(size int64, durationMs uint) int {
+	if size <= 0 || durationMs == 0 {
+		return 0
+	}
+	seconds := float64(durationMs) / 1000.0
+	if seconds <= 0 {
+		return 0
+	}
+	return int(float64(size*8) / 1000.0 / seconds)
+}
+
+func (s *SongService) transcodeFromPath(
+	songID uuid.UUID,
+	sourcePath string,
+	overrideProfiles []TranscodeProfile,
+) ([]model.SongFile, error) {
+	if s.Transcode == nil {
+		return nil, fmt.Errorf("transcode service not configured")
+	}
+	// Resolve which profiles to build (override or active profiles for the source).
+	settings := s.Transcode.GetSettings()
+	profiles := overrideProfiles
+	if profiles == nil {
+		profiles = s.Transcode.ActiveProfiles(settings)
+	}
+	if len(profiles) == 0 {
+		return nil, fmt.Errorf("no transcode profiles enabled")
+	}
+
+	// Probe duration once to avoid re-reading the source for each profile.
+	duration, err := s.ProbeDuration(sourcePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to probe source duration: %v", err)
+	}
+	durationMs := uint(duration * 1000)
+	sourceLossless := IsLosslessSourcePath(sourcePath)
+	sourceBitrateKbps := 0
+	if info, statErr := os.Stat(sourcePath); statErr == nil {
+		sourceBitrateKbps = s.ComputeBitrateKbps(info.Size(), durationMs)
+	}
+
+	profiles = s.Transcode.FilterProfilesForSource(profiles, sourceLossless, sourceBitrateKbps)
+	if len(profiles) == 0 {
+		return []model.SongFile{}, nil
+	}
+
+	// Load existing variant records to update-in-place where possible.
+	existingFiles, _ := s.Store.GetSongFilesBySongID(songID)
+	existingByVariant := map[string]model.SongFile{}
+	for _, file := range existingFiles {
+		if file.Variant == "" {
+			continue
+		}
+		existingByVariant[file.Variant] = file
+	}
+
+	var results []model.SongFile
+	for _, profile := range profiles {
+		// Build or update the DB record for this variant.
+		sf := model.SongFile{
+			SongID:   songID,
+			Format:   profile.Format,
+			Codec:    profile.Codec,
+			Variant:  profile.Variant,
+			Duration: durationMs,
+		}
+		if existing, ok := existingByVariant[profile.Variant]; ok {
+			sf.ID = existing.ID
+			sf.CreatedAt = existing.CreatedAt
+			sf.UpdatedAt = time.Now()
+		} else {
+			sf.ID = uuid.New()
+		}
+		// Ensure destination exists, then run ffmpeg and persist size/bitrate.
+		destPath := sf.FilePath()
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+			return nil, fmt.Errorf("failed to prepare storage: %v", err)
+		}
+		if err := s.Transcode.Transcode(sourcePath, destPath, profile); err != nil {
+			return nil, fmt.Errorf("failed to transcode %s: %v", profile.Variant, err)
+		}
+
+		if info, statErr := os.Stat(destPath); statErr == nil {
+			sf.Size = info.Size()
+		}
+		sf.Bitrate = s.ComputeBitrateKbps(sf.Size, sf.Duration)
+
+		if _, ok := existingByVariant[profile.Variant]; ok {
+			if err := s.Store.UpdateSongFile(&sf); err != nil {
+				return nil, fmt.Errorf("failed to update song file record: %v", err)
+			}
+		} else {
+			if err := s.Store.CreateSongFile(&sf); err != nil {
+				return nil, fmt.Errorf("failed to create song file record: %v", err)
+			}
+		}
+
+		results = append(results, sf)
+	}
+	return results, nil
+}
+
+func (s *SongService) storeSourceFile(
+	songID uuid.UUID,
+	sourcePath string,
+	format string,
+) (model.SongFile, error) {
+	if s.Storage == nil {
+		return model.SongFile{}, fmt.Errorf("storage not configured")
+	}
+
+	duration, err := s.ProbeDuration(sourcePath)
+	if err != nil {
+		return model.SongFile{}, fmt.Errorf("failed to probe source duration: %v", err)
+	}
+	durationMs := uint(duration * 1000)
+
+	var size int64
+	if info, statErr := os.Stat(sourcePath); statErr == nil {
+		size = info.Size()
+	}
+
+	existingFiles, _ := s.Store.GetSongFilesBySongID(songID)
+	var existing *model.SongFile
+	for i, file := range existingFiles {
+		if file.Variant == VariantSource {
+			existing = &existingFiles[i]
+			break
+		}
+	}
+
+	sf := model.SongFile{
+		ID:       uuid.New(),
+		SongID:   songID,
+		Format:   format,
+		Variant:  VariantSource,
+		Duration: durationMs,
+		Size:     size,
+	}
+	if existing != nil {
+		sf.ID = existing.ID
+		sf.CreatedAt = existing.CreatedAt
+	}
+	sf.Bitrate = s.ComputeBitrateKbps(sf.Size, sf.Duration)
+
+	destPath := sf.FilePath()
+	if sourcePath != destPath {
+		if moveErr := s.Storage.Move(sourcePath, destPath); moveErr != nil {
+			fh, openErr := os.Open(sourcePath)
+			if openErr != nil {
+				return model.SongFile{}, fmt.Errorf("failed to open source file: %v", openErr)
+			}
+			defer fh.Close()
+			if saveErr := s.Storage.Save(destPath, fh); saveErr != nil {
+				return model.SongFile{}, fmt.Errorf("failed to save source file: %v", saveErr)
+			}
+			if removeErr := os.Remove(sourcePath); removeErr != nil {
+				log.Printf("Warning: failed to delete source file after copy: %v\n", removeErr)
+			}
+		}
+	}
+
+	if existing != nil && existing.FilePath() != destPath {
+		_ = s.Storage.Delete(existing.FilePath())
+	}
+
+	if existing != nil {
+		if err := s.Store.UpdateSongFile(&sf); err != nil {
+			return model.SongFile{}, fmt.Errorf("failed to update source file record: %v", err)
+		}
+	} else {
+		if err := s.Store.CreateSongFile(&sf); err != nil {
+			return model.SongFile{}, fmt.Errorf("failed to create source file record: %v", err)
+		}
+	}
+
+	return sf, nil
+}
+
+func (s *SongService) TranscodeFromPath(
+	songID uuid.UUID,
+	sourcePath string,
+	profiles []TranscodeProfile,
+) ([]model.SongFile, error) {
+	return s.transcodeFromPath(songID, sourcePath, profiles)
+}
+
+func (s *SongService) EnsureStreamableHighestQuality(song model.Song) (int, bool, error) {
+	source, sourcePath, ok := s.resolveTranscodeSource(song)
+	if !ok {
+		return 0, false, nil
+	}
+	if isStreamableFormat(source.Format) {
+		return 0, false, nil
+	}
+
+	duration, err := s.ProbeDuration(sourcePath)
+	if err != nil {
+		return 0, false, err
+	}
+	durationMs := uint(duration * 1000)
+	sourceBitrateKbps := 0
+	if info, statErr := os.Stat(sourcePath); statErr == nil {
+		sourceBitrateKbps = s.ComputeBitrateKbps(info.Size(), durationMs)
+	}
+
+	settings := s.Transcode.GetSettings()
+	profile := s.Transcode.HighestQualityProfile(
+		settings,
+		IsLosslessSourceFile(*source),
+		sourceBitrateKbps,
+	)
+	if profile == nil {
+		return 0, false, nil
+	}
+
+	files, err := s.TranscodeFromPath(song.ID, sourcePath, []TranscodeProfile{*profile})
+	if err != nil {
+		return 0, false, err
+	}
+
+	return len(files), true, nil
+}
+
+func (s *SongService) EnsureMissingTranscodes(song model.Song) (int, bool, error) {
+	source, sourcePath, ok := s.resolveTranscodeSource(song)
+	if !ok {
+		return 0, false, nil
+	}
+
+	settings := s.Transcode.GetSettings()
+
+	duration, err := s.ProbeDuration(sourcePath)
+	if err != nil {
+		return 0, false, err
+	}
+	durationMs := uint(duration * 1000)
+	sourceBitrateKbps := 0
+	if info, statErr := os.Stat(sourcePath); statErr == nil {
+		sourceBitrateKbps = s.ComputeBitrateKbps(info.Size(), durationMs)
+	}
+
+	profiles := s.Transcode.ProfilesForSource(
+		settings,
+		IsLosslessSourceFile(*source),
+		sourceBitrateKbps,
+	)
+	missing := MissingOrMismatchedProfiles(song.SongFiles, profiles)
+	if len(missing) == 0 {
+		return 0, false, nil
+	}
+
+	if _, err := s.TranscodeFromPath(song.ID, sourcePath, missing); err != nil {
+		return 0, false, err
+	}
+	return len(missing), true, nil
+}
+
+func (s *SongService) ResolveSongFilePath(file model.SongFile) (string, bool) {
+	path := file.FilePath()
+	if s.Storage == nil {
+		return resolveLocalSongFilePath(path, file.LegacyFilePath())
+	}
+	if s.Storage.Exists(path) {
+		return path, true
+	}
+	legacy := file.LegacyFilePath()
+	if s.Storage.Exists(legacy) {
+		if err := s.Storage.Move(legacy, path); err == nil {
+			return path, true
+		}
+		return legacy, true
+	}
+	return "", false
+}
+
+func (s *SongService) resolveTranscodeSource(song model.Song) (*model.SongFile, string, bool) {
+	if len(song.SongFiles) == 0 || s.Transcode == nil {
+		return nil, "", false
+	}
+	source := SelectBestSourceFile(song.SongFiles)
+	if source == nil {
+		return nil, "", false
+	}
+	sourcePath, ok := s.ResolveSongFilePath(*source)
+	if !ok {
+		return nil, "", false
+	}
+	return source, sourcePath, true
+}
+
+func resolveLocalSongFilePath(path, legacy string) (string, bool) {
+	if fileExists(path) {
+		return path, true
+	}
+	if fileExists(legacy) {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err == nil {
+			if err := os.Rename(legacy, path); err == nil {
+				return path, true
+			}
+		}
+		return legacy, true
+	}
+	return "", false
+}
+
+func isStreamableFormat(format string) bool {
+	return utils.AudioContentType(format) != "application/octet-stream"
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func (s *SongService) resolveArtists(artistsInput []SongCreationArtist) ([]model.Artist, error) {

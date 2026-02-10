@@ -4,17 +4,15 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"net/http"
 	"os"
 
 	"github.com/ProjectDistribute/distributor/db"
 	"github.com/ProjectDistribute/distributor/handler"
 	"github.com/ProjectDistribute/distributor/router"
 	"github.com/ProjectDistribute/distributor/utils"
-	"github.com/labstack/echo/v4"
 )
 
-var version = "s0.3.0"
+var version = "s0.4.0"
 
 // @title Distributor API
 // @version 1.0
@@ -26,8 +24,6 @@ var version = "s0.3.0"
 func main() {
 
 	r := router.New()
-
-	v1 := r.Group("/api")
 
 	// DB
 	d, err := db.New()
@@ -50,16 +46,7 @@ func main() {
 	storage := utils.LocalFileStorage{}
 	h := handler.GigaHandler(d, storage, version)
 	r.Use(h.BandwidthMiddleware)
-	h.Register(v1)
-
-	// Route to open distribute://add-server/<SERVER_URL> URL scheme
-	r.GET("/add", func(c echo.Context) error {
-		serverURL := utils.Getenv("SERVER_URL", "")
-		if serverURL == "" {
-			return c.String(http.StatusBadRequest, "SERVER_URL environment variable is not configured")
-		}
-		return c.Redirect(http.StatusTemporaryRedirect, "distribute://add-server/"+serverURL)
-	})
+	h.Register(r)
 
 	funnyMessages := []string{
 		"Shiver me timbers that was hard to install...",
@@ -67,12 +54,11 @@ func main() {
 		"You wouldn't download a car.",
 		"There is no cloud, just your server now.",
 		"Keep it secret. Keep it safe.",
-		"I'm sorry, Dave. I'm afraid I can now do that.",
+		"Look at me. I am the Distributor now.",
 		"Have you tried turning it off and on again?",
 		"May the Source be with you.",
 		"If a user gives you up, never let them down.",
-		"Look at me. I am the server now.",
-		"Should've named the client \"W App\"",
+		"\"WApp\" rebrand in 2077!",
 	}
 
 	log.Printf(`

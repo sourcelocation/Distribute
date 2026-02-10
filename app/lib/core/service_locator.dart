@@ -142,14 +142,15 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton(() => SettingsCubit(sl()));
   sl.registerFactory(() => AuthCubit(sl(), sl(), sl())..checkAuthStatus());
-  sl.registerFactory(() => ServerStatusCubit(sl()));
+  sl.registerFactory(() => ServerStatusCubit(sl(), sl()));
   sl.registerFactory(() => RequestsCubit(sl()));
   sl.registerFactory(() => MusicPlayerBloc(controller: sl()));
-  sl.registerFactory(() => PositionCubit(controller: sl(), musicCubit: sl()));
+  sl.registerFactory(() => PositionCubit(controller: sl()));
   sl.registerFactory(
     () => DownloadCubit(
       sl<SongDownloadService>(),
       sl<PlaylistRepository>(),
+      sl<SettingsRepository>(),
     ),
   );
   sl.registerFactory(() => SyncCubit(sl()));

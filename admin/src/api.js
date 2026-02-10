@@ -33,3 +33,15 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const buildApiUrl = (path) => {
+    const base = api.defaults.baseURL || '';
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (!base) return cleanPath;
+    if (/^https?:\/\//i.test(base)) {
+        const baseUrl = base.endsWith('/') ? base : `${base}/`;
+        return new URL(cleanPath.replace(/^\//, ''), baseUrl).toString();
+    }
+    const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+    return `${trimmedBase}${cleanPath}`;
+};
